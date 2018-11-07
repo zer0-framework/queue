@@ -22,6 +22,9 @@
         "Zer0-Framework/Zer0": "*",
         "Zer0-Framework/Config": "*"
     },
+    "bin": [
+        "bin/queue-worker"
+    ],
     "autoload": {
         "classmap": ["src/"]
     },
