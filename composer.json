@@ -18,6 +18,7 @@
     },
     "require": {
         "php": ">=7.2",
+        "ext-igbinary": "*",
         "Zer0-Framework/Zer0": "*",
         "Zer0-Framework/Config": "*"
     },
