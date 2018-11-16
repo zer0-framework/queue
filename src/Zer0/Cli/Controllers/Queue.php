@@ -3,7 +3,9 @@
 namespace Zer0\Cli\Controllers;
 
 use Zer0\Cli\AbstractController;
+use Zer0\Cli\Controllers\Queue\Tap;
 use Zer0\Cli\Controllers\Queue\Top;
+use Zer0\Cli\Exceptions\InvalidArgument;
 use Zer0\Queue\SomeTask;
 use Zer0\Queue\TaskAbstract;
 
@@ -14,6 +16,7 @@ use Zer0\Queue\TaskAbstract;
 final class Queue extends AbstractController
 {
     use Top;
+    use Tap;
 
     /**
      * @var \Zer0\Queue\Pools\Base
@@ -35,55 +38,44 @@ final class Queue extends AbstractController
     }
 
     /**
-     * @param string $channel
+     * @param string $task
+     * @throws InvalidArgument
      */
-    public function tapAction(string $channel = null, string $filter = null): void
+    public function enqueueAction(string $task = ''): void
     {
-        $this->cli->interactiveMode(true);
-        $this->queue->subscribe(
-            $channel ?? 'default',
-            function (?string $event, ?TaskAbstract $task) use ($filter): bool {
-                static $styleSheet = [
-                    'new' => 'fg(blue) i',
-                    'complete' => 'fg(green) i',
-                    'error' => 'fg(red) i',
-                ];
+        $this->queue->enqueue($this->hydrateTask($task));
+    }
 
-                if ($event !== null) {
-                    if ($filter !== null && $event !== $filter) {
-                        return true;
-                    }
-                    if ($task->hasException()) {
-                        $event = 'error';
-                    }
+    /**
+     * @param string $task
+     * @throws InvalidArgument
+     */
+    public function enqueueWaitAction(string $task = ''): void
+    {
+        $this->queue->enqueue($this->hydrateTask($task));
+    }
 
-                    $this->cli->write(strtoupper($event), $styleSheet[$event]);
-                    $this->cli->write(str_repeat(' ', 15 - strlen($event)));
-
-                    $this->cli->write($task->getId());
-                    $this->cli->write("\t");
-
-                    $this->cli->write(get_class($task));
-                    $this->cli->write("\t");
-
-                    $this->cli->colorfulJson($task);
-
-                    $this->cli->writeln('');
-
-                    if ($task->hasException()) {
-                        $this->cli->writeln("⇧\t". $task->getException()->getMessage());
-                    }
-                }
-                if (!$this->cli->interactiveMode()) {
-                    return false;
-                }
-                return true;
-            }
-        );
-        if (!$this->cli->interactiveMode()) {
-            $this->cli->writeln('');
-            return;
+    /**
+     * @param string $str
+     * @return TaskAbstract
+     * @throws InvalidArgument
+     */
+    protected function hydrateTask(string $str): TaskAbstract
+    {
+        $split = explode(':', $str, 2);
+        $class = $split[0];
+        $properties = json_decode($split[1] ?? '{}');
+        if (!class_exists($class)) {
+            throw new InvalidArgument('Class ' . $class . ' not found.');
         }
+        if (!is_a($class, TaskAbstract::class, true)) {
+            throw new InvalidArgument('Class ' . $class . ' must be inherited from ' . TaskAbstract::class);
+        }
+        $task = new $class;
+        foreach ($properties as $prop => $value) {
+            $task->{$prop} = $value;
+        }
+        return $task;
     }
 
     /**

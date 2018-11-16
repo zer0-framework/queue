@@ -87,7 +87,8 @@ trait Top
     public function window(string $mode = 'top', string $channel = 'default'): void
     {
         $this->mode = $mode;
-        $rl = new class extends Readline {
+        $rl = new class extends Readline
+        {
             /**
              * @param $method
              * @param $args
@@ -178,18 +179,20 @@ trait Top
                     list($event, $data) = $item;
                     if ($event === 'new') {
                         $task = $data;
-                        echo($pre = 'NEW: ' . get_class($task) . ': ')
-                            . quicky_modifier_mb_truncate(json_encode($task), $windowSize['x'] - strlen($pre)) . PHP_EOL;
+                        echo ($pre = 'NEW: ' . get_class($task) . ': ')
+                            . quicky_modifier_mb_truncate(json_encode($task),
+                                $windowSize['x'] - strlen($pre)) . PHP_EOL;
                     } elseif ($event === 'complete') {
                         $task = $data;
-                        echo($pre = 'COMPLETE: ' . get_class($task) . ': ')
-                            . quicky_modifier_mb_truncate(json_encode($task), $windowSize['x'] - strlen($pre)) . PHP_EOL;
+                        echo ($pre = 'COMPLETE: ' . get_class($task) . ': ')
+                            . quicky_modifier_mb_truncate(json_encode($task),
+                                $windowSize['x'] - strlen($pre)) . PHP_EOL;
                     }
                 }
             } else {
                 $tasks = $this->queue->pendingTasks($this->channel, 0, $windowSize['y'] - 10);
                 foreach ($tasks as $task) {
-                    echo($pre = get_class($task) . ': ')
+                    echo ($pre = get_class($task) . ': ')
                         . quicky_modifier_mb_truncate(json_encode($task), $windowSize['x'] - strlen($pre)) . PHP_EOL;
                 }
             }
