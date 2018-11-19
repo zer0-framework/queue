@@ -50,9 +50,9 @@ final class Queue extends AbstractController
      * @param string $task
      * @throws InvalidArgument
      */
-    public function enqueueWaitAction(string $task = ''): void
+    public function enqueueWaitAction(string $task = '', string $timeout = '10'): void
     {
-        $this->queue->enqueue($this->hydrateTask($task));
+        $this->queue->enqueueWait($this->hydrateTask($task), (int) $timeout);
     }
 
     /**
