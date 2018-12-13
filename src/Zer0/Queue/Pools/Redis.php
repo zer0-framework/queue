@@ -266,7 +266,7 @@ final class Redis extends Base
             'backlog' => $res[1],
             'pending' => min($res[2], (int)$res[0]),
         ];
-        $stats['complete'] = $stats['total'] - $stats['pending'];
+        $stats['complete'] = $stats['total'] - max($stats['pending'], $stats['backlog']);
         return $stats;
     }
 
