@@ -262,7 +262,10 @@ final class RedisAsync extends BaseAsync
     public function complete(TaskAbstract $task): void
     {
         $payload = igbinary_serialize($task);
-        $this->redis->multi(function (RedisConnection $redis) use ($task, $payload) {
+        $this->redis->multi(function (?RedisConnection $redis) use ($task, $payload) {
+            if (!$redis) {
+                return;
+            }
             $taskId = $task->getId();
             $redis->publish($this->prefix . ':output:' . $taskId, $payload);
 
