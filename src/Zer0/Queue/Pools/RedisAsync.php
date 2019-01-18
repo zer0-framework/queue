@@ -48,8 +48,10 @@ final class RedisAsync extends BaseAsync
     {
         $taskId = $task->getId();
         if ($taskId === null) {
-            $this->nextId(function ($id) use ($task, $cb) {
-                $task->setId($id);
+            $this->nextId(function (?string $id) use ($task, $cb) {
+                if ($id !== null) {
+                    $task->setId($id);
+                }
                 $this->enqueue($task, $cb);
             });
             return;
