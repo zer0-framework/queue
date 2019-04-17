@@ -150,7 +150,7 @@ final class RedisAsync extends BaseAsync
     {
         if ($channels === null) {
             $this->listChannels(function (?array $channels) use ($cb) {
-                if (!$channels) {
+                if ($channels === null) {
                     $cb(null);
                     return;
                 }
@@ -158,6 +158,13 @@ final class RedisAsync extends BaseAsync
             });
             return;
         }
+        if (!count($channels)) {
+            setTimeout(function() use ($cb) {
+                $cb(null);
+            }, 1e6);
+           return;
+        }
+
         $keys = [];
         foreach ($channels as $chan) {
             $keys[] = $this->prefix . ':channel:' . $chan;
