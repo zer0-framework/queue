@@ -43,7 +43,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
 
         $this->tasks = new \SplObjectStorage;
 
-        $this->pool = $this->app->broker('QueueAsync')->get();
+        $this->pool = $this->app->factory('QueueAsync');
 
         $this->poll();
 

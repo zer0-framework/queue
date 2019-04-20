@@ -9,7 +9,7 @@
 ## Пример использования
 
 ```php
-$pool = $this->app->broker('Queue')->get();
+$pool = $this->app->factory('Queue');
 try {
     var_dump($pool->enqueueWait(new SomeTask(), /* ждём ответа */ 3 /* секунды */)->foo);
     // string(3) "bar"

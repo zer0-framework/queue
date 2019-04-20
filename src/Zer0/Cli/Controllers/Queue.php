@@ -34,7 +34,7 @@ final class Queue extends AbstractController
     public function before(): void
     {
         parent::before();
-        $this->queue = $this->app->broker('Queue')->get();
+        $this->queue = $this->app->factory('Queue');
     }
 
     /**
