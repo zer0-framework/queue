@@ -1,8 +1,8 @@
 {
-    "name"  : "Zer0-Framework/Queue",
+    "name"  : "zer0-framework/queue",
     "type"  : "library",
     "keywords": ["Zer0", "highload"],
-    "homepage": "https://github.com/Zer0-Framework/Queue",
+    "homepage": "https://github.com/zer0-framework/queue",
     "license" : "GPL-3.0-or-later",
     "description": "",
     "authors" : [
@@ -14,13 +14,13 @@
     ],
     "support" : {
         "email" : "kak.serpom.po.yaitsam@gmail.com",
-        "issues": "https://github.com/Zer0-Framework/Queue/issues"
+        "issues": "https://github.com/zer0-framework/queue/issues"
     },
     "require": {
         "php": ">=7.2",
         "ext-igbinary": "*",
-        "Zer0-Framework/Zer0": "*",
-        "Zer0-Framework/Config": "*"
+        "zer0-framework/core": "*",
+        "zer0-framework/config": "*"
     },
     "bin": [
         "bin/queue-worker"
