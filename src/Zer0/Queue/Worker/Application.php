@@ -71,7 +71,9 @@ final class Application extends \PHPDaemon\Core\AppInstance
                 });
                 $task();
             }
-            $this->poll();
+            if (!Daemon::$process->terminated && !Daemon::$process->reload) {
+                $this->poll();
+            }
         });
     }
 }
