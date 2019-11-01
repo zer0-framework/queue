@@ -2,6 +2,7 @@
 
 namespace Zer0\Queue\Worker;
 
+use PHPDaemon\Core\Daemon;
 use PHPDaemon\Core\Timer;
 use Zer0\App;
 use Zer0\Queue\Pools\BaseAsync;
@@ -71,7 +72,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
                 });
                 $task();
             }
-            if (!Daemon::$process->terminated && !Daemon::$process->reload) {
+            if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
                 $this->poll();
             }
         });
