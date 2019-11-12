@@ -38,6 +38,11 @@ abstract class TaskAbstract
     private $exception;
 
     /**
+     * @var array
+     */
+    protected $log = [];
+
+    /**
      *
      */
     protected function before(): void
@@ -144,7 +149,7 @@ abstract class TaskAbstract
         $callback = $this->callback;
         $this->callback = null;
         $this->after();
-        call_user_func($callback, $this);
+        $callback($this);
     }
 
     /**
@@ -157,7 +162,7 @@ abstract class TaskAbstract
         $this->exception = $exception;
         $this->onException();
         $this->after();
-        call_user_func($callback, $this);
+        $callback($this);
     }
 
     /**
@@ -187,5 +192,22 @@ abstract class TaskAbstract
         }
 
         return $this;
+    }
+
+
+    /**
+     * @return array
+     */
+    final public function getLog(): array
+    {
+        return $this->log;
+    }
+
+    /**
+     * @param mixed ...$args
+     */
+    public function log(...$args): void
+    {
+        $this->log[] = sprintf(...$args);
     }
 }

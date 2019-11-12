@@ -50,10 +50,40 @@ final class Queue extends AbstractController
      * @param string $task
      * @throws InvalidArgument
      */
-    public function enqueueWaitAction(string $task = '', string $timeout = '10'): void
+    public function enqueueWaitAction(string $task = '', string $timeout = '10', string $extraFlags = ''): void
     {
-        $task = $this->queue->enqueueWait($this->hydrateTask($task), (int) $timeout)->throwException();
+        $task = $this->queue->enqueueWait($this->hydrateTask($task), (int)$timeout);
+        $task->throwException();
+        $this->renderTask($task, $extraFlags);
+    }
+
+    /**
+     * @param string $task
+     */
+    public function runInlineAction(string $task, string $extraFlags = ''): void
+    {
+        $task = $this->hydrateTask($task);
+        $task->setCallback(function (TaskAbstract $task) use ($extraFlags) {
+            $this->renderTask($task, $extraFlags);
+        });
+        $task();
+    }
+
+    /**
+     * @param TaskAbstract $task
+     * @param string $extraFlags
+     */
+    protected function renderTask(TaskAbstract $task, string $extraFlags = '')
+    {
+        $task->throwException();
         $this->cli->colorfulJson($task);
+        $this->cli->writeln('');
+        if (preg_match('~\bdebug\b~i', $extraFlags)) {
+            $this->cli->writeln('');
+            foreach ($task->getLog() as $item) {
+                $this->cli->writeln("\t * " . $item);
+            }
+        }
         $this->cli->writeln('');
     }
 
