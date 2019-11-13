@@ -95,7 +95,7 @@ final class Queue extends AbstractController
     {
         $split = explode(':', $str, 2);
         $class = $split[0];
-        $properties = json_decode($split[1] ?? '{}');
+        $properties = json_decode($split[1] ?? '{}', true);
         if (!class_exists($class)) {
             throw new InvalidArgument('Class ' . $class . ' not found.');
         }
