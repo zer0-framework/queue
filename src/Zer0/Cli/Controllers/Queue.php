@@ -102,7 +102,15 @@ final class Queue extends AbstractController
         if (!is_a($class, TaskAbstract::class, true)) {
             throw new InvalidArgument('Class ' . $class . ' must be inherited from ' . TaskAbstract::class);
         }
-        $task = new $class;
+        $args = [];
+        for ($i = 0;; ++$i) {
+            if (!isset($properties[$i])) {
+                break;
+            }
+            $args[] = $properties[$i];
+            unset($properties[$i]);
+        }
+        $task = new $class(...$args);
         foreach ($properties as $prop => $value) {
             $task->{$prop} = $value;
         }
