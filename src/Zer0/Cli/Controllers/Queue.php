@@ -53,7 +53,6 @@ final class Queue extends AbstractController
     public function enqueueWaitAction(string $task = '', string $timeout = '10', string $extraFlags = ''): void
     {
         $task = $this->queue->enqueueWait($this->hydrateTask($task), (int)$timeout);
-        $task->throwException();
         $this->renderTask($task, $extraFlags);
     }
 
