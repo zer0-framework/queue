@@ -74,10 +74,17 @@ final class Queue extends AbstractController
      */
     protected function renderTask(TaskAbstract $task, string $extraFlags = '')
     {
-        $task->throwException();
+        $debug = preg_match('~\bdebug\b~i', $extraFlags);
+        if ($task->hasException()) {
+            $output = (string) $task->getException();
+            if (!$debug) {
+                $output = strstr($output, "\nStack trace:", true);
+            }
+            $this->cli->errorLine($output);
+        }
         $this->cli->colorfulJson($task);
         $this->cli->writeln('');
-        if (preg_match('~\bdebug\b~i', $extraFlags)) {
+        if ($debug) {
             $this->cli->writeln('');
             foreach ($task->getLog() as $item) {
                 $this->cli->writeln("\t * " . $item);
@@ -95,25 +102,29 @@ final class Queue extends AbstractController
     {
         $split = explode(':', $str, 2);
         $class = $split[0];
-        $properties = json_decode($split[1] ?? '{}', true);
+        $json = $split[1] ?? '{}';
         if (!class_exists($class)) {
             throw new InvalidArgument('Class ' . $class . ' not found.');
         }
         if (!is_a($class, TaskAbstract::class, true)) {
             throw new InvalidArgument('Class ' . $class . ' must be inherited from ' . TaskAbstract::class);
         }
-        $args = [];
-        for ($i = 0;; ++$i) {
-            if (!isset($properties[$i])) {
-                break;
-            }
-            $args[] = $properties[$i];
-            unset($properties[$i]);
+
+
+        if (substr($json, 0, 1) === '{') {
+            $properties = json_decode($json);
+            $str = serialize($properties);
+            $split = explode(':', $str, 4);
+            $split[1] = strlen($class);
+            $split[2] = rtrim(explode(':', serialize($class), 3)[2], ';');
+            $str = join(':', $split);
+            $task = unserialize($str);
+        } elseif (substr($json, 0, 1) === '[') {
+            $task = new $class(...json_decode($json));
+        } else {
+            throw new InvalidArgument('Invalid JSON: must be array/object');
         }
-        $task = new $class(...$args);
-        foreach ($properties as $prop => $value) {
-            $task->{$prop} = $value;
-        }
+
         return $task;
     }
 
