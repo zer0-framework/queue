@@ -62,6 +62,13 @@ abstract class TaskAbstract
     {
     }
 
+    /**
+     *
+     */
+    public function beforeEnqueue(): void
+    {
+    }
+
 
     /**
      *

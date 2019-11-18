@@ -62,6 +62,7 @@ final class Redis extends Base
         if ($autoId) {
             $task->setId($taskId = $this->nextId());
         }
+        $task->beforeEnqueue();
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);

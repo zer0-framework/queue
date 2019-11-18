@@ -58,6 +58,7 @@ final class RedisAsync extends BaseAsync
         }
         $autoId = ctype_digit($taskId);
 
+        $task->beforeEnqueue();
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);
