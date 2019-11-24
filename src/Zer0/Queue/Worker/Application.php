@@ -70,7 +70,9 @@ final class Application extends \PHPDaemon\Core\AppInstance
                     $this->pool->complete($task);
                     $this->tasks->detach($task);
                 });
+                Daemon::$process->setState(Daemon::WSTATE_BUSY);
                 $task();
+                Daemon::$process->setState(Daemon::WSTATE_IDLE);
             }
             if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
                 $this->poll();
