@@ -92,7 +92,7 @@ final class Queue extends AbstractController
         }
         $this->cli->writeln('');
     }
-
+    
     /**
      * @param string $str
      * @return TaskAbstract

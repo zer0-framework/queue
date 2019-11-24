@@ -9,6 +9,7 @@ use Zer0\Config\Interfaces\ConfigInterface;
 use Zer0\Queue\Exceptions\IncorrectStateException;
 use Zer0\Queue\Exceptions\WaitTimeoutException;
 use Zer0\Queue\TaskAbstract;
+use Zer0\Queue\TaskCollection;
 
 /**
  * Class Redis
@@ -162,11 +163,57 @@ final class Redis extends Base
         }
 
         $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
-        if ($payload === false) {
-            throw new IncorrectStateException;
+        if ($payload === null) {
+            throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
         }
 
         return igbinary_unserialize($payload);
+    }
+
+
+    /**
+     * @param TaskCollection $collection
+     * @param int $seconds
+     * @return void
+     * @throws WaitTimeoutException
+     */
+    public function waitCollection(TaskCollection $collection, int $seconds = 3): void
+    {
+        $tasks = [];
+        $pending = $collection->pending();
+        $done = $collection->done();
+        foreach ($pending as $task) {
+            $taskId = $task->getId();
+            $tasks[$this->prefix . ':blpop:' . $taskId] = $task;
+        }
+        $time = microtime(true);
+        for (; ;) {
+            if (!$tasks) {
+                return;
+            }
+            if (microtime(true) > $time + $seconds) {
+                throw new WaitTimeoutException;
+            }
+            $pop = $this->redis->blpop(array_keys($tasks), 1);
+            if ($pop === null) {
+                continue;
+            }
+            $key = array_key_first($pop);
+            $task = $tasks[$key] ?? null;
+            if ($task === null) {
+                continue;
+            }
+            $taskId = $task->getId();
+            $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
+            if ($payload === null) {
+                throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
+            }
+
+            $pending->detach($task);
+            $task = igbinary_unserialize($payload);
+            $done->attach($task);
+            unset($tasks[$key]);
+        }
     }
 
     /**
@@ -328,12 +375,9 @@ final class Redis extends Base
                 );
             }
 
-            $redis->set($this->prefix . ':output:' . $taskId, $payload);
-            $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
-
+            $redis->set($this->prefix . ':output:' . $taskId, $payload, 15 * 60);
             $redis->rPush($this->prefix . ':blpop:' . $taskId, range(1, 10));
-            $redis->expire($this->prefix . ':blpop:' . $taskId, 10);
-
+            $redis->expire($this->prefix . ':blpop:' . $taskId, 15 * 60);
             $redis->del($this->prefix . ':input:' . $taskId);
 
             $redis->exec();

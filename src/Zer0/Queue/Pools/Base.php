@@ -6,6 +6,7 @@ use Zer0\App;
 use Zer0\Config\Interfaces\ConfigInterface;
 use Zer0\Queue\Exceptions\WaitTimeoutException;
 use Zer0\Queue\TaskAbstract;
+use Zer0\Queue\TaskCollection;
 
 /**
  * Class Base
@@ -64,6 +65,22 @@ abstract class Base
      * @throws WaitTimeoutException
      */
     abstract public function wait(TaskAbstract $task, int $seconds = 3): TaskAbstract;
+
+    /**
+     * @param TaskCollection $collection
+     * @param int $seconds
+     * @return void
+     * @throws WaitTimeoutException
+     */
+    abstract public function waitCollection(TaskCollection $collection, int $seconds = 3): void;
+
+    /**
+     * @return TaskCollection
+     */
+    final public function collection(): TaskCollection
+    {
+        return new TaskCollection($this);
+    }
 
     /**
      * @param TaskAbstract $task
