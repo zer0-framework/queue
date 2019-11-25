@@ -223,13 +223,13 @@ abstract class TaskAbstract
      */
     public function getObjectVars(): array
     {
-        return array_diff_key([
+        return array_diff_key(get_object_vars($this), [
             '_channel' => true,
             'callback' => true,
             '_id' => true,
             'invoked' => true,
             'exception' => true,
             'log' => true,
-        ], get_object_vars($this));
+        ]);
     }
 }
