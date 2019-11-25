@@ -57,6 +57,27 @@ class TaskCollection
     }
 
     /**
+     * @param \Iterator $it
+     * @param int $maxPending
+     * @return $this
+     */
+    public function from(\Iterator $it, int $maxPending = 0): self {
+        for (;;) {
+            if ($maxPending > 0) {
+                if ($this->pending->count() >= $maxPending) {
+                    return $this;
+                }
+            }
+            if (!$task = $it->current()) {
+                return $this;
+            }
+            $it->next();
+            $this->add($task);
+        }
+        return $this;
+    }
+
+    /**
      * @param int $seconds
      * @return $this
      * @throws Exceptions\WaitTimeoutException
