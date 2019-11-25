@@ -63,7 +63,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
      */
     public function poll()
     {
-        $this->pool->poll(null, function (?TaskAbstract $task) {
+        $this->pool->poll($this->config->channels->value ?? null, function (?TaskAbstract $task) {
             if ($task) {
                 $this->tasks->attach($task);
                 $task->setCallback(function (TaskAbstract $task) {
