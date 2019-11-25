@@ -217,4 +217,19 @@ abstract class TaskAbstract
     {
         $this->log[] = sprintf(...$args);
     }
+
+    /**
+     * @return array
+     */
+    public function getObjectVars(): array
+    {
+        return array_key_diff([
+            '_channel' => true,
+            'callback' => true,
+            '_id' => true,
+            'invoked' => true,
+            'exception' => true,
+            'log' => true,
+        ], get_object_vars($this));
+    }
 }
