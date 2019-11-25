@@ -24,6 +24,11 @@ class TaskCollection
     protected $done;
 
     /**
+     * @var \SplObjectStorage
+     */
+    protected $failed;
+
+    /**
      * @var Base
      */
     protected $pool;
@@ -37,6 +42,7 @@ class TaskCollection
         $this->pool = $pool;
         $this->pending = new \SplObjectStorage;
         $this->done = new \SplObjectStorage;
+        $this->failed = new \SplObjectStorage;
     }
 
     /**
@@ -75,5 +81,13 @@ class TaskCollection
     public function done(): \SplObjectStorage
     {
         return $this->done;
+    }
+
+    /**
+     * @return \SplObjectStorage
+     */
+    public function failed(): \SplObjectStorage
+    {
+        return $this->failed;
     }
 }

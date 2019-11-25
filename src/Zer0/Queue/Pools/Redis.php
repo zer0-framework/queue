@@ -182,6 +182,7 @@ final class Redis extends Base
         $tasks = [];
         $pending = $collection->pending();
         $done = $collection->done();
+        $failed = $collection->failed();
         foreach ($pending as $task) {
             $taskId = $task->getId();
             $tasks[$this->prefix . ':blpop:' . $taskId] = $task;
@@ -211,7 +212,12 @@ final class Redis extends Base
 
             $pending->detach($task);
             $task = igbinary_unserialize($payload);
-            $done->attach($task);
+
+            if ($task->hasException()) {
+                $failed->attach($task);
+            } else {
+                $done->attach($task);
+            }
             unset($tasks[$key]);
         }
     }
