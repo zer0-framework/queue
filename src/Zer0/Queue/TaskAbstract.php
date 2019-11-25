@@ -223,7 +223,7 @@ abstract class TaskAbstract
      */
     public function getObjectVars(): array
     {
-        return array_key_diff([
+        return array_diff_key([
             '_channel' => true,
             'callback' => true,
             '_id' => true,
