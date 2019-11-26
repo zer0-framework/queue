@@ -58,10 +58,10 @@ class TaskCollection
 
     /**
      * @param \Iterator $it
-     * @param int $maxPending
+     * @param int $maxPending = 1000
      * @return $this
      */
-    public function from(\Iterator $it, int $maxPending = 0): self {
+    public function from(\Iterator $it, int $maxPending = 1000): self {
         for (;;) {
             if ($maxPending > 0) {
                 if ($this->pending->count() >= $maxPending) {
