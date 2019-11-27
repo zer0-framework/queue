@@ -83,7 +83,7 @@ class TaskCollection
      */
     public function isEmpty(): bool
     {
-        $this->pending->count() === 0;
+        return $this->pending->count() === 0;
     }
 
     /**
