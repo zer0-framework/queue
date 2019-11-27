@@ -81,9 +81,9 @@ class TaskCollection
     /**
      * @return bool
      */
-    public function isEmpty(): bool
+    public function hasPending(): bool
     {
-        return $this->pending->count() === 0;
+        return $this->pending->count() > 0;
     }
 
     /**
