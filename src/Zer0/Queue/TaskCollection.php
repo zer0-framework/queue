@@ -69,11 +69,11 @@ class TaskCollection
                     return $this;
                 }
             }
-            if (!$task = $it->current()) {
+            if (!$it->valid()) {
                 return $this;
             }
+            $this->add($it->current());
             $it->next();
-            $this->add($task);
         }
         return $this;
     }
