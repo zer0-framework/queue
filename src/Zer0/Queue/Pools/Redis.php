@@ -193,7 +193,7 @@ final class Redis extends Base
                 return;
             }
             if (microtime(true) > $time + $seconds) {
-                throw new WaitTimeoutException;
+                return;
             }
             $pop = $this->redis->blpop(array_keys($tasks), 1);
             if ($pop === null) {

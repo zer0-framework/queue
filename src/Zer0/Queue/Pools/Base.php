@@ -70,7 +70,6 @@ abstract class Base
      * @param TaskCollection $collection
      * @param int $seconds
      * @return void
-     * @throws WaitTimeoutException
      */
     abstract public function waitCollection(TaskCollection $collection, int $seconds = 3): void;
 

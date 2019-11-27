@@ -61,8 +61,9 @@ class TaskCollection
      * @param int $maxPending = 1000
      * @return $this
      */
-    public function from(\Iterator $it, int $maxPending = 1000): self {
-        for (;;) {
+    public function pull(\Iterator $it, int $maxPending = 1000): self
+    {
+        for (; ;) {
             if ($maxPending > 0) {
                 if ($this->pending->count() >= $maxPending) {
                     return $this;
@@ -78,9 +79,16 @@ class TaskCollection
     }
 
     /**
+     * @return bool
+     */
+    public function isEmpty(): bool
+    {
+        $this->pending->count() === 0;
+    }
+
+    /**
      * @param int $seconds
      * @return $this
-     * @throws Exceptions\WaitTimeoutException
      */
     public function wait(int $seconds = 3): self
     {
