@@ -63,6 +63,14 @@ class TaskCollection
     }
 
     /**
+     * @return bool
+     */
+    public function isEmpty(): bool
+    {
+        return $this->pending->count() === 0 && $this->ready->count() === 0;
+    }
+
+    /**
      * @param \Iterator $it
      * @param int $maxPending = 1000
      * @return $this
