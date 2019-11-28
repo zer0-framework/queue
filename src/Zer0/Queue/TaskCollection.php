@@ -21,12 +21,17 @@ class TaskCollection
     /**
      * @var \SplObjectStorage
      */
-    protected $done;
+    protected $successful;
 
     /**
      * @var \SplObjectStorage
      */
     protected $failed;
+
+    /**
+     * @var \SplObjectStorage
+     */
+    protected $ready;
 
     /**
      * @var Base
@@ -41,8 +46,9 @@ class TaskCollection
     {
         $this->pool = $pool;
         $this->pending = new \SplObjectStorage;
-        $this->done = new \SplObjectStorage;
+        $this->successful = new \SplObjectStorage;
         $this->failed = new \SplObjectStorage;
+        $this->ready = new \SplObjectStorage;
     }
 
     /**
@@ -97,6 +103,17 @@ class TaskCollection
     }
 
     /**
+     * @param TaskAbstract $task
+     */
+    public function unlink(TaskAbstract $task): void
+    {
+        $this->successful->detach($task);
+        $this->ready->detach($task);
+        $this->failed->detach($task);
+        $this->pending->detach($task);
+    }
+
+    /**
      * @return \SplObjectStorage
      */
     public function pending(): \SplObjectStorage
@@ -107,9 +124,9 @@ class TaskCollection
     /**
      * @return \SplObjectStorage
      */
-    public function done(): \SplObjectStorage
+    public function successful(): \SplObjectStorage
     {
-        return $this->done;
+        return $this->successful;
     }
 
     /**
@@ -118,5 +135,13 @@ class TaskCollection
     public function failed(): \SplObjectStorage
     {
         return $this->failed;
+    }
+
+    /**
+     * @return \SplObjectStorage
+     */
+    public function ready(): \SplObjectStorage
+    {
+        return $this->ready;
     }
 }
