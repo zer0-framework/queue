@@ -179,48 +179,56 @@ final class Redis extends Base
      */
     public function waitCollection(TaskCollection $collection, int $seconds = 3): void
     {
-        $tasks = [];
+        $hash = [];
         $pending = $collection->pending();
         $successful = $collection->successful();
         $ready = $collection->ready();
         $failed = $collection->failed();
         foreach ($pending as $task) {
-            $taskId = $task->getId();
-            $tasks[$this->prefix . ':blpop:' . $taskId] = $task;
+            $key = $this->prefix . ':blpop:' . $task->getId();
+            $item =& $hash[$key];
+            if ($item === null) {
+                $item = [];
+            }
+            $item[] = $task;
         }
         $time = microtime(true);
         for (; ;) {
-            if (!$tasks) {
+            if (!$hash) {
                 return;
             }
             if (microtime(true) > $time + $seconds) {
                 return;
             }
-            $pop = $this->redis->blpop(array_keys($tasks), 1);
+            $pop = $this->redis->blpop(array_keys($hash), 1);
             if ($pop === null) {
                 continue;
             }
             $key = array_key_first($pop);
-            $task = $tasks[$key] ?? null;
-            if ($task === null) {
+
+            $tasks = $hash[$key] ?? null;
+            if ($tasks === null) {
                 continue;
             }
-            $taskId = $task->getId();
+            unset($hash[$key]);
+
+            $taskId = $tasks[0]->getId();
             $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
             if ($payload === null) {
                 throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
             }
 
-            $pending->detach($task);
-            $ready->attach($task);
-            $task = igbinary_unserialize($payload);
+            foreach ($tasks as $task) {
+                $pending->detach($task);
+                $ready->attach($task);
+                $task = igbinary_unserialize($payload);
 
-            if ($task->hasException()) {
-                $failed->attach($task);
-            } else {
-                $successful->attach($task);
+                if ($task->hasException()) {
+                    $failed->attach($task);
+                } else {
+                    $successful->attach($task);
+                }
             }
-            unset($tasks[$key]);
         }
     }
 
