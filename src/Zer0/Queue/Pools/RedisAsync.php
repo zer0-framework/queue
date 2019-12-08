@@ -83,10 +83,10 @@ final class RedisAsync extends BaseAsync
                 'NX',
                 time() + $task->getTimeoutSeconds(),
                 $taskId . ':' . $task->getTimeoutSeconds(),
-                function (RedisConnection $redis) use ($func, $cb): void {
+                function (RedisConnection $redis) use ($func, $task, $cb): void {
                     if (!$redis->result) {
                         if ($cb !== null) {
-                            $cb(null, $this);
+                            $cb($task, $this);
                         }
                         return;
                     }
