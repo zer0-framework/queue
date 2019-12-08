@@ -130,6 +130,14 @@ abstract class TaskAbstract
     }
 
     /**
+     * @return bool
+     */
+    final public function invoked(): bool
+    {
+        return $this->invoked;
+    }
+
+    /**
      * @throws InvalidStateException
      */
     final public function __invoke()
@@ -162,7 +170,7 @@ abstract class TaskAbstract
     /**
      * @param BaseException $exception
      */
-    final protected function exception(BaseException $exception): void
+    final public function exception(BaseException $exception): void
     {
         $callback = $this->callback;
         $this->callback = null;

@@ -125,19 +125,21 @@ final class RedisAsync extends BaseAsync
         $this->redis->blPop(
             $this->prefix . ':blpop:' . $taskId,
             $seconds,
-            function (RedisConnection $redis) use ($taskId, $cb) {
+            function (RedisConnection $redis) use ($taskId, $cb, $task) {
                 if (!$redis->result) {
-                    $cb(null);
+                    $cb($task);
                     return;
                 }
                 $this->redis->get($this->prefix . ':output:' . $taskId, function (RedisConnection $redis) use ($cb) {
                     if ($redis->result === null) {
-                        $cb(null);
+                        $task->exception(new IncorrectStateException('empty output'));
+                        $cb($task);
                     }
                     try {
                         $cb(igbinary_unserialize($redis->result));
                     } catch (\ErrorException $e) {
-                        $cb(null);
+                        $task->exception($e);
+                        $cb($task);
                     }
                 });
             }
