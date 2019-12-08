@@ -218,9 +218,8 @@ final class Redis extends Base
                 throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
             }
 
-            foreach ($tasks as $task) {
-                $pending->detach($task);
-                $ready->attach($task);
+            foreach ($tasks as $prev) {
+                $pending->detach($prev);
                 $task = igbinary_unserialize($payload);
 
                 if ($task->hasException()) {

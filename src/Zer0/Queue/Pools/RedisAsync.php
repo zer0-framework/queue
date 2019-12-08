@@ -62,15 +62,7 @@ final class RedisAsync extends BaseAsync
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);
-        $func = function ($redis) use ($cb, $task, $channel, $taskId, $autoId, $payload) {
-            if ($task->getTimeoutSeconds() > 0) {
-                if (!$redis->result) {
-                    if ($cb !== null) {
-                        $cb(null, $this);
-                    }
-                    return;
-                }
-            }
+        $func = function (RedisConnection $redis) use ($cb, $task, $channel, $taskId, $autoId, $payload): void {
             $redis->publish($this->prefix . ':enqueue-channel:' . $channel, $payload);
             $redis->multi();
             $redis->sAdd($this->prefix . ':list-channels', $channel);
@@ -78,7 +70,7 @@ final class RedisAsync extends BaseAsync
             $redis->incr($this->prefix . ':channel-total:' . $channel);
             $redis->set($this->prefix . ':input:' . $taskId, $payload);
             $redis->del($this->prefix . ':output:' . $taskId, $this->prefix . ':blpop:' . $taskId);
-            $redis->exec(function (RedisConnection $redis) use ($cb, $task) {
+            $redis->exec(function (RedisConnection $redis) use ($cb, $task): void {
                 if ($cb !== null) {
                     $cb($task, $this);
                 }
@@ -92,10 +84,20 @@ final class RedisAsync extends BaseAsync
                 'NX',
                 time() + $task->getTimeoutSeconds(),
                 $taskId . ':' . $task->getTimeoutSeconds(),
-                $func
+                function (RedisConnection $redis) use ($func, $cb): void {
+                    if (!$redis->result) {
+                        if ($cb !== null) {
+                            $cb(null, $this);
+                        }
+                        return;
+                    }
+                    $func($redis);
+                }
             );
         } else {
-            $func($this->redis);
+            $this->redis->getConnection(null, function(RedisConnection $redis) use ($func): void  {
+                $func($redis);
+            });
         }
     }
 

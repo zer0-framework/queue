@@ -59,7 +59,11 @@ abstract class BaseAsync
      */
     public function enqueueWait(TaskAbstract $task, int $seconds, callable $cb): void
     {
-        $this->enqueue($task, function (TaskAbstract $task) use ($seconds, $cb) {
+        $this->enqueue($task, function (?TaskAbstract $task) use ($seconds, $cb): void {
+            if ($task === null) {
+                $cb(null);
+                return;
+            }
             $this->wait($task, $seconds, $cb);
         });
     }
