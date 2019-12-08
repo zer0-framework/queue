@@ -79,7 +79,6 @@ final class RedisAsync extends BaseAsync
 
         if ($task->getTimeoutSeconds() > 0) {
             $this->redis->zadd(
-                'zadd',
                 $this->prefix . ':channel-pending:' . $channel,
                 'NX',
                 time() + $task->getTimeoutSeconds(),
