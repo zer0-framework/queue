@@ -48,7 +48,7 @@ abstract class BaseAsync
 
     /**
      * @param TaskAbstract $task
-     * @param callable $cb (?TaskAbstract $success, BaseAsync $pool)
+     * @param callable $cb (TaskAbstract $success, BaseAsync $pool)
      */
     abstract public function enqueue(TaskAbstract $task, ?callable $cb = null): void;
 
