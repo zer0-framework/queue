@@ -2,6 +2,7 @@
 
 namespace Zer0\Queue\Pools;
 
+use Google\Cloud\Tasks\V2\Task;
 use RedisClient\Pipeline\PipelineInterface;
 use RedisClient\RedisClient;
 use Zer0\App;
@@ -158,6 +159,9 @@ final class Redis extends Base
     public function wait(TaskAbstract $task, int $timeout = 3): TaskAbstract
     {
         $taskId = $task->getId();
+        if ($taskId === null) {
+            throw new IncorrectStateException('\'id\' property must be set before wait() is called');
+        }
         if (!$this->redis->blpop([$this->prefix . ':blpop:' . $taskId], $timeout)) {
             throw new WaitTimeoutException;
         }

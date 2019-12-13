@@ -37,6 +37,16 @@ abstract class Base
 
     /**
      * @param TaskAbstract $task
+     */
+    public function assignId(TaskAbstract $task): void
+    {
+        if ($task->getId() === null) {
+            $task->setId($this->nextId());
+        }
+    }
+
+    /**
+     * @param TaskAbstract $task
      * @return TaskAbstract
      */
     abstract public function enqueue(TaskAbstract $task): TaskAbstract;

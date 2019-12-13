@@ -120,7 +120,7 @@ final class RedisAsync extends BaseAsync
     {
         $taskId = $task->getId();
         if ($taskId === null) {
-            throw new IncorrectStateException;
+            throw new IncorrectStateException('\'id\' property must be set before wait() is called');
         }
         $this->redis->blPop(
             $this->prefix . ':blpop:' . $taskId,

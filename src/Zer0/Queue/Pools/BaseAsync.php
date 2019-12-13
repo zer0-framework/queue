@@ -66,6 +66,21 @@ abstract class BaseAsync
 
     /**
      * @param TaskAbstract $task
+     * @param callable $cb
+     */
+    public function assignId(TaskAbstract $task, callable $cb): void
+    {
+        if ($task->getId() === null) {
+            $this->nextId(static function (int $id) use ($task, $cb): void {
+                $task->setId($id);
+                $cb($task);
+            });
+        }
+    }
+
+
+    /**
+     * @param TaskAbstract $task
      */
     abstract public function complete(TaskAbstract $task): void;
 
