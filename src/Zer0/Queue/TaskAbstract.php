@@ -138,6 +138,9 @@ abstract class TaskAbstract
      */
     final public function setId(string $id): void
     {
+        if (!ctype_digit($id) && $this->getTimeoutSeconds() <= 0) {
+            throw new InvalidStateException('setId(): getTimeoutSeconds() must return an integer greater than 0');
+        }
         $this->_id = $id;
     }
 
