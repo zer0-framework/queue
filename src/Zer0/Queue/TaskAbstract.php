@@ -3,6 +3,7 @@
 namespace Zer0\Queue;
 
 use Zer0\Exceptions\BaseException;
+use Zer0\Exceptions\InvalidArgumentException;
 use Zer0\Exceptions\InvalidStateException;
 use Zer0\Queue\Exceptions\RuntimeException;
 use Zer0\Queue\Pools\BaseAsync;
@@ -138,8 +139,11 @@ abstract class TaskAbstract
      */
     final public function setId(string $id): void
     {
+        if ($id === '') {
+            throw new InvalidArgumentException('$id cannot be empty');
+        }
         if (!ctype_digit($id) && $this->getTimeoutSeconds() <= 0) {
-            throw new InvalidStateException('setId(): getTimeoutSeconds() must return an integer greater than 0');
+            throw new InvalidArgumentException('setId(): non-numeric id requires getTimeoutSeconds() to return an integer greater than 0');
         }
         $this->_id = $id;
     }
