@@ -137,7 +137,7 @@ final class RedisAsync extends BaseAsync
                     }
                     try {
                         $cb(igbinary_unserialize($redis->result));
-                    } catch (\ErrorException $e) {
+                    } catch (\Throwable $e) {
                         $task->exception($e);
                         $cb($task);
                     }
@@ -191,9 +191,13 @@ final class RedisAsync extends BaseAsync
                             $cb(null);
                             return;
                         }
-                        $task = igbinary_unserialize($redis->result);
-                        $task->setChannel($channel);
-                        $cb($task);
+                        try {
+                            $task = igbinary_unserialize($redis->result);
+                            $task->setChannel($channel);
+                            $cb($task);
+                        } catch (\Throwable $e) {
+                            $cb(null);
+                        }
                     }
                 );
             }

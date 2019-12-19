@@ -64,7 +64,10 @@ final class Application extends \PHPDaemon\Core\AppInstance
     public function poll()
     {
         $this->pool->poll($this->config->channels->value ?? null, function (?TaskAbstract $task) {
-            if ($task) {
+            try {
+                if (!$task) {
+                    return;
+                }
                 $this->tasks->attach($task);
                 $task->setQueuePool($this->pool);
                 $task->setCallback(function (TaskAbstract $task) {
@@ -75,9 +78,10 @@ final class Application extends \PHPDaemon\Core\AppInstance
                 Daemon::$process->setState(Daemon::WSTATE_BUSY);
                 $task();
                 Daemon::$process->setState(Daemon::WSTATE_IDLE);
-            }
-            if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
-                $this->poll();
+            } finally {
+                if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
+                    $this->poll();
+                }
             }
         });
     }

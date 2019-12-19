@@ -2,7 +2,6 @@
 
 namespace Zer0\Queue\Pools;
 
-use Google\Cloud\Tasks\V2\Task;
 use RedisClient\Pipeline\PipelineInterface;
 use RedisClient\RedisClient;
 use Zer0\App;
