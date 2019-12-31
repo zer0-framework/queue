@@ -45,11 +45,11 @@ final class Application extends \PHPDaemon\Core\AppInstance
         $this->tasks = new \SplObjectStorage;
 
         $this->pool = $this->app->factory('QueueAsync');
-
+        
         $this->poll();
 
-        setTimeout(function (Timer $timer) {
-            $this->pool->listChannels(function ($channels) {
+        setTimeout(function (Timer $timer): void {
+            $this->pool->listChannels(function (array $channels): void {
                 foreach ($channels as $channel) {
                     $this->pool->timedOutTasks($channel);
                 }

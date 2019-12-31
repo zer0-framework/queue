@@ -57,8 +57,17 @@ class TaskCollection
      */
     public function add(TaskAbstract $task): self
     {
-        $this->pool->enqueue($task);
-        $this->pending->attach($task);
+        if ($task->invoked()) {
+            $this->ready->attach($task);
+            if ($task->hasException()) {
+                $this->failed->attach($task);
+            } else {
+                $this->successful->attach($task);
+            }
+        } else {
+            $this->pool->enqueue($task);
+            $this->pending->attach($task);
+        }
         return $this;
     }
 
