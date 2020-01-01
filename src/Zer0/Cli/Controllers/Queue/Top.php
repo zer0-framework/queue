@@ -168,7 +168,6 @@ trait Top
             $stats = $this->queue->getChannelStats($this->channel);
 
             echo 'Backlog: ' . number_format($stats['backlog']) . "\t";
-            echo 'Pending: ' . number_format($stats['pending']) . "\t";
             echo 'Total: ' . number_format($stats['total']) . "\t";
             echo 'Complete: ' . number_format($stats['complete']) . "\t";
             echo PHP_EOL;

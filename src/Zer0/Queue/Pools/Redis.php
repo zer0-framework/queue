@@ -323,16 +323,14 @@ final class Redis extends Base
             $pipeline->multi();
             $pipeline->get($this->prefix . ':channel-total:' . $channel); // Total
             $pipeline->llen($this->prefix . ':channel:' . $channel);   // Backlog
-            $pipeline->zcard($this->prefix . ':channel-pending:' . $channel); // Pending
             $pipeline->exec();
         });
-        $res = $res[4];
+        $res = $res[3];
         $stats = [
             'total' => (int)$res[0],
             'backlog' => $res[1],
-            'pending' => min($res[2], (int)$res[0]),
         ];
-        $stats['complete'] = $stats['total'] - max($stats['pending'], $stats['backlog']);
+        $stats['complete'] = $stats['total'] - $stats['backlog'];
         return $stats;
     }
 
