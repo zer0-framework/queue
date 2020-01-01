@@ -48,7 +48,7 @@ abstract class BaseAsync
 
     /**
      * @param TaskAbstract $task
-     * @param callable $cb (?TaskAbstract $success, BaseAsync $pool)
+     * @param callable $cb (TaskAbstract $success, BaseAsync $pool)
      */
     abstract public function enqueue(TaskAbstract $task, ?callable $cb = null): void;
 
@@ -59,10 +59,25 @@ abstract class BaseAsync
      */
     public function enqueueWait(TaskAbstract $task, int $seconds, callable $cb): void
     {
-        $this->enqueue($task, function (TaskAbstract $task) use ($seconds, $cb) {
+        $this->enqueue($task, function (TaskAbstract $task) use ($seconds, $cb): void {
             $this->wait($task, $seconds, $cb);
         });
     }
+
+    /**
+     * @param TaskAbstract $task
+     * @param callable $cb
+     */
+    public function assignId(TaskAbstract $task, callable $cb): void
+    {
+        if ($task->getId() === null) {
+            $this->nextId(static function (int $id) use ($task, $cb): void {
+                $task->setId($id);
+                $cb($task);
+            });
+        }
+    }
+
 
     /**
      * @param TaskAbstract $task

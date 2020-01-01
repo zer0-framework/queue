@@ -2,6 +2,7 @@
 
 namespace Zer0\Queue\Worker;
 
+use PHPDaemon\Core\Daemon;
 use PHPDaemon\Core\Timer;
 use Zer0\App;
 use Zer0\Queue\Pools\BaseAsync;
@@ -44,11 +45,10 @@ final class Application extends \PHPDaemon\Core\AppInstance
         $this->tasks = new \SplObjectStorage;
 
         $this->pool = $this->app->factory('QueueAsync', $this->config->name ?? '');
-
         $this->poll();
 
-        setTimeout(function (Timer $timer) {
-            $this->pool->listChannels(function ($channels) {
+        setTimeout(function (Timer $timer): void {
+            $this->pool->listChannels(function (array $channels): void {
                 foreach ($channels as $channel) {
                     $this->pool->timedOutTasks($channel);
                 }
@@ -62,16 +62,26 @@ final class Application extends \PHPDaemon\Core\AppInstance
      */
     public function poll()
     {
-        $this->pool->poll(null, function (?TaskAbstract $task) {
-            if ($task) {
+        $this->pool->poll($this->config->channels->value ?? null, function (?TaskAbstract $task) {
+            try {
+                if (!$task) {
+                    return;
+                }
                 $this->tasks->attach($task);
+                $task->setQueuePool($this->pool);
                 $task->setCallback(function (TaskAbstract $task) {
+                    $task->setQueuePool(null);
                     $this->pool->complete($task);
                     $this->tasks->detach($task);
                 });
+                Daemon::$process->setState(Daemon::WSTATE_BUSY);
                 $task();
+                Daemon::$process->setState(Daemon::WSTATE_IDLE);
+            } finally {
+                if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
+                    $this->poll();
+                }
             }
-            $this->poll();
         });
     }
 }

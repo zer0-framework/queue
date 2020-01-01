@@ -58,18 +58,11 @@ final class RedisAsync extends BaseAsync
         }
         $autoId = ctype_digit($taskId);
 
+        $task->beforeEnqueue();
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);
-        $func = function ($redis) use ($cb, $task, $channel, $taskId, $autoId, $payload) {
-            if ($task->getTimeoutSeconds() > 0) {
-                if (!$redis->result) {
-                    if ($cb !== null) {
-                        $cb(null, $this);
-                    }
-                    return;
-                }
-            }
+        $func = function (RedisConnection $redis) use ($cb, $task, $channel, $taskId, $autoId, $payload): void {
             $redis->publish($this->prefix . ':enqueue-channel:' . $channel, $payload);
             $redis->multi();
             $redis->sAdd($this->prefix . ':list-channels', $channel);
@@ -77,7 +70,7 @@ final class RedisAsync extends BaseAsync
             $redis->incr($this->prefix . ':channel-total:' . $channel);
             $redis->set($this->prefix . ':input:' . $taskId, $payload);
             $redis->del($this->prefix . ':output:' . $taskId, $this->prefix . ':blpop:' . $taskId);
-            $redis->exec(function (RedisConnection $redis) use ($cb, $task) {
+            $redis->exec(function (RedisConnection $redis) use ($cb, $task): void {
                 if ($cb !== null) {
                     $cb($task, $this);
                 }
@@ -86,15 +79,24 @@ final class RedisAsync extends BaseAsync
 
         if ($task->getTimeoutSeconds() > 0) {
             $this->redis->zadd(
-                'zadd',
                 $this->prefix . ':channel-pending:' . $channel,
                 'NX',
                 time() + $task->getTimeoutSeconds(),
                 $taskId . ':' . $task->getTimeoutSeconds(),
-                $func
+                function (RedisConnection $redis) use ($func, $task, $cb): void {
+                    if (!$redis->result) {
+                        if ($cb !== null) {
+                            $cb($task, $this);
+                        }
+                        return;
+                    }
+                    $func($redis);
+                }
             );
         } else {
-            $func($this->redis);
+            $this->redis->getConnection(null, function(RedisConnection $redis) use ($func): void  {
+                $func($redis);
+            });
         }
     }
 
@@ -118,24 +120,26 @@ final class RedisAsync extends BaseAsync
     {
         $taskId = $task->getId();
         if ($taskId === null) {
-            throw new IncorrectStateException;
+            throw new IncorrectStateException('\'id\' property must be set before wait() is called');
         }
         $this->redis->blPop(
             $this->prefix . ':blpop:' . $taskId,
             $seconds,
-            function (RedisConnection $redis) use ($taskId, $cb) {
+            function (RedisConnection $redis) use ($taskId, $cb, $task) {
                 if (!$redis->result) {
-                    $cb(null);
+                    $cb($task);
                     return;
                 }
                 $this->redis->get($this->prefix . ':output:' . $taskId, function (RedisConnection $redis) use ($cb) {
                     if ($redis->result === null) {
-                        $cb(null);
+                        $task->exception(new IncorrectStateException('empty output'));
+                        $cb($task);
                     }
                     try {
                         $cb(igbinary_unserialize($redis->result));
-                    } catch (\ErrorException $e) {
-                        $cb(null);
+                    } catch (\Throwable $e) {
+                        $task->exception($e);
+                        $cb($task);
                     }
                 });
             }
@@ -187,9 +191,13 @@ final class RedisAsync extends BaseAsync
                             $cb(null);
                             return;
                         }
-                        $task = igbinary_unserialize($redis->result);
-                        $task->setChannel($channel);
-                        $cb($task);
+                        try {
+                            $task = igbinary_unserialize($redis->result);
+                            $task->setChannel($channel);
+                            $cb($task);
+                        } catch (\Throwable $e) {
+                            $cb(null);
+                        }
                     }
                 );
             }

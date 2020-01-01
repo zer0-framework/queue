@@ -17,6 +17,7 @@ trait Tap
     public function tapAction(string $channel = null, string $filter = null): void
     {
         $this->cli->interactiveMode(true);
+        $this->cli->asyncSignals(true);
         $this->queue->subscribe(
             $channel ?? 'default',
             function (?string $event, ?TaskAbstract $task) use ($filter): bool {
@@ -43,7 +44,7 @@ trait Tap
                     $this->cli->write(get_class($task));
                     $this->cli->write(':');
 
-                    $this->cli->colorfulJson($task);
+                    $this->cli->colorfulJson($task->getObjectVars());
 
                     $this->cli->writeln('');
 

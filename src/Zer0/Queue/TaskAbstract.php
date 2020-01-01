@@ -3,8 +3,10 @@
 namespace Zer0\Queue;
 
 use Zer0\Exceptions\BaseException;
+use Zer0\Exceptions\InvalidArgumentException;
 use Zer0\Exceptions\InvalidStateException;
 use Zer0\Queue\Exceptions\RuntimeException;
+use Zer0\Queue\Pools\BaseAsync;
 
 /**
  * Class TaskAbstract
@@ -38,6 +40,21 @@ abstract class TaskAbstract
     private $exception;
 
     /**
+     * @var array
+     */
+    protected $log = [];
+
+    /**
+     * @var array
+     */
+    private $then = [];
+
+    /**
+     * @var BaseAsync
+     */
+    protected $queuePool;
+
+    /**
      *
      */
     protected function before(): void
@@ -51,9 +68,35 @@ abstract class TaskAbstract
     abstract protected function execute(): void;
 
     /**
+     * @param BaseAsync|null $pool
+     */
+    final public function setQueuePool(?BaseAsync $pool): void
+    {
+        $this->queuePool = $pool;
+    }
+
+    /**
+     * @param TaskAbstract $previous
+     */
+    public function previous(TaskAbstract $previous): void
+    {
+    }
+
+    /**
      *
      */
     protected function after(): void
+    {
+        foreach ($this->then as $task) {
+            $task->previous($this);
+            $this->queuePool->enqueue($task);
+        }
+    }
+
+    /**
+     *
+     */
+    public function beforeEnqueue(): void
     {
     }
 
@@ -96,6 +139,12 @@ abstract class TaskAbstract
      */
     final public function setId(string $id): void
     {
+        if ($id === '') {
+            throw new InvalidArgumentException('$id cannot be empty');
+        }
+        if (!ctype_digit($id) && $this->getTimeoutSeconds() <= 0) {
+            throw new InvalidArgumentException('setId(): non-numeric id requires getTimeoutSeconds() to return an integer greater than 0');
+        }
         $this->_id = $id;
     }
 
@@ -115,6 +164,14 @@ abstract class TaskAbstract
     {
         $this->callback = $callback;
         return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    final public function invoked(): bool
+    {
+        return $this->invoked;
     }
 
     /**
@@ -144,21 +201,33 @@ abstract class TaskAbstract
         $callback = $this->callback;
         $this->callback = null;
         $this->after();
-        call_user_func($callback, $this);
+        $this->then = [];
+        $callback($this);
     }
 
     /**
      * @param BaseException $exception
      */
-    final protected function exception(BaseException $exception): void
+    final public function exception(BaseException $exception): void
     {
         $callback = $this->callback;
         $this->callback = null;
         $this->exception = $exception;
         $this->onException();
         $this->after();
-        call_user_func($callback, $this);
+        $callback($this);
     }
+
+    /**
+     * @param TaskAbstract $task
+     * @return $this
+     */
+    final public function then(TaskAbstract $task): self
+    {
+        $this->then[] = $task;
+        return $this;
+    }
+
 
     /**
      * @return null|\Throwable
@@ -187,5 +256,37 @@ abstract class TaskAbstract
         }
 
         return $this;
+    }
+
+
+    /**
+     * @return array
+     */
+    final public function getLog(): array
+    {
+        return $this->log;
+    }
+
+    /**
+     * @param mixed ...$args
+     */
+    public function log(...$args): void
+    {
+        $this->log[] = sprintf(...$args);
+    }
+
+    /**
+     * @return array
+     */
+    public function getObjectVars(): array
+    {
+        return array_diff_key(get_object_vars($this), [
+            '_channel' => true,
+            'callback' => true,
+            '_id' => true,
+            'invoked' => true,
+            'exception' => true,
+            'log' => true,
+        ]);
     }
 }

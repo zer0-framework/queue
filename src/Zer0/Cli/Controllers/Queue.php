@@ -50,13 +50,49 @@ final class Queue extends AbstractController
      * @param string $task
      * @throws InvalidArgument
      */
-    public function enqueueWaitAction(string $task = '', string $timeout = '10'): void
+    public function enqueueWaitAction(string $task = '', string $timeout = '10', string $extraFlags = ''): void
     {
-        $task = $this->queue->enqueueWait($this->hydrateTask($task), (int) $timeout)->throwException();
-        $this->cli->colorfulJson($task);
-        $this->cli->writeln('');
+        $task = $this->queue->enqueueWait($this->hydrateTask($task), (int)$timeout);
+        $this->renderTask($task, $extraFlags);
     }
 
+    /**
+     * @param string $task
+     */
+    public function runInlineAction(string $task, string $extraFlags = ''): void
+    {
+        $task = $this->hydrateTask($task);
+        $task->setCallback(function (TaskAbstract $task) use ($extraFlags) {
+            $this->renderTask($task, $extraFlags);
+        });
+        $task();
+    }
+
+    /**
+     * @param TaskAbstract $task
+     * @param string $extraFlags
+     */
+    protected function renderTask(TaskAbstract $task, string $extraFlags = '')
+    {
+        $debug = preg_match('~\bdebug\b~i', $extraFlags);
+        if ($task->hasException()) {
+            $output = (string) $task->getException();
+            if (!$debug) {
+                $output = strstr($output, "\nStack trace:", true);
+            }
+            $this->cli->errorLine($output);
+        }
+        $this->cli->colorfulJson($task);
+        $this->cli->writeln('');
+        if ($debug) {
+            $this->cli->writeln('');
+            foreach ($task->getLog() as $item) {
+                $this->cli->writeln("\t * " . $item);
+            }
+        }
+        $this->cli->writeln('');
+    }
+    
     /**
      * @param string $str
      * @return TaskAbstract
@@ -66,17 +102,29 @@ final class Queue extends AbstractController
     {
         $split = explode(':', $str, 2);
         $class = $split[0];
-        $properties = json_decode($split[1] ?? '{}');
+        $json = $split[1] ?? '{}';
         if (!class_exists($class)) {
             throw new InvalidArgument('Class ' . $class . ' not found.');
         }
         if (!is_a($class, TaskAbstract::class, true)) {
             throw new InvalidArgument('Class ' . $class . ' must be inherited from ' . TaskAbstract::class);
         }
-        $task = new $class;
-        foreach ($properties as $prop => $value) {
-            $task->{$prop} = $value;
+
+
+        if (substr($json, 0, 1) === '{') {
+            $properties = json_decode($json);
+            $str = serialize($properties);
+            $split = explode(':', $str, 4);
+            $split[1] = strlen($class);
+            $split[2] = rtrim(explode(':', serialize($class), 3)[2], ';');
+            $str = join(':', $split);
+            $task = unserialize($str);
+        } elseif (substr($json, 0, 1) === '[') {
+            $task = new $class(...json_decode($json));
+        } else {
+            throw new InvalidArgument('Invalid JSON: must be array/object');
         }
+
         return $task;
     }
 

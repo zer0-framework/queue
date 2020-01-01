@@ -124,6 +124,7 @@ trait Top
         });
 
         $this->cli->interactiveMode(true);
+        $this->cli->asyncSignals(true);
 
         $this->window = new RefreshableWindow;
         Cursor::clear('all');
