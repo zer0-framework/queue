@@ -6,6 +6,7 @@ use Zer0\App;
 use Zer0\Config\Interfaces\ConfigInterface;
 use Zer0\Queue\Exceptions\WaitTimeoutException;
 use Zer0\Queue\TaskAbstract;
+use Zer0\Queue\TaskCollection;
 
 /**
  * Class BaseAsync
@@ -78,7 +79,23 @@ abstract class BaseAsync
         }
     }
 
+    /**
+     * @param TaskAbstract ...$tasks
+     * @return TaskCollection
+     */
+    final public function collection(...$tasks): TaskCollection
+    {
+        $collection = new TaskCollection(...$tasks);
+        $collection->setPoolAsync($this);
+        return $collection;
+    }
 
+    /**
+     * @param TaskCollection $collection
+     * @param callable $cb
+     */
+    abstract public function waitCollection(TaskCollection $collection, callable $cb): void;
+    
     /**
      * @param TaskAbstract $task
      */

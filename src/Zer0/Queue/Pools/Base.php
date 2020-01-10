@@ -84,11 +84,14 @@ abstract class Base
     abstract public function waitCollection(TaskCollection $collection, int $seconds = 3): void;
 
     /**
+     * @param TaskAbstract ...$tasks
      * @return TaskCollection
      */
-    final public function collection(): TaskCollection
+    final public function collection(...$tasks): TaskCollection
     {
-        return new TaskCollection($this);
+        $collection = new TaskCollection(...$tasks);
+        $collection->setPool($this);
+        return $collection;
     }
 
     /**

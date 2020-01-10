@@ -8,7 +8,9 @@ use PHPDaemon\Core\Daemon;
 use Zer0\App;
 use Zer0\Config\Interfaces\ConfigInterface;
 use Zer0\Queue\Exceptions\IncorrectStateException;
+use Zer0\Queue\Exceptions\WaitTimeoutException;
 use Zer0\Queue\TaskAbstract;
+use Zer0\Queue\TaskCollection;
 
 /**
  * Class RedisAsync
@@ -94,7 +96,7 @@ final class RedisAsync extends BaseAsync
                 }
             );
         } else {
-            $this->redis->getConnection(null, function(RedisConnection $redis) use ($func): void  {
+            $this->redis->getConnection(null, function (RedisConnection $redis) use ($func): void {
                 $func($redis);
             });
         }
@@ -147,6 +149,71 @@ final class RedisAsync extends BaseAsync
     }
 
     /**
+     * @param TaskCollection $collection
+     * @param callable $cb
+     * @throws IncorrectStateException
+     */
+    public function waitCollection(TaskCollection $collection, callable $cb, int $timeout = 3): void
+    {
+        $hash = [];
+        foreach ($collection->pending() as $task) {
+            $key = $this->prefix . ':blpop:' . $task->getId();
+            $item =& $hash[$key];
+            if ($item === null) {
+                $item = [];
+            }
+            $item[] = $task;
+        }
+
+        if (!$hash) {
+            return;
+        }
+
+        $cb($collection);
+
+        $this->redis->blpop(array_keys($hash), $timeout, function (RedisConnection  $redis) use ($collection, $cb) {
+            try {
+                $pop = $redis->result;
+                if ($pop === null) {
+                    return;
+                }
+                $key = array_key_first($pop);
+
+                $tasks = $hash[$key] ?? null;
+                if ($tasks === null) {
+                    return;
+                }
+                unset($hash[$key]);
+
+                $taskId = $tasks[0]->getId();
+                $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
+                if ($payload === null) {
+                    throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
+                }
+
+                $pending = $collection->pending();
+                $successful = $collection->successful();
+                $ready = $collection->ready();
+                $failed = $collection->failed();
+
+                foreach ($tasks as $prev) {
+                    $pending->detach($prev);
+                    $task = igbinary_unserialize($payload);
+
+                    $ready->attach($task);
+                    if ($task->hasException()) {
+                        $failed->attach($task);
+                    } else {
+                        $successful->attach($task);
+                    }
+                }
+            } finally {
+                $cb($collection);
+            }
+        });
+    }
+
+    /**
      * @param array|null $channels
      * @param callable $cb (TaskAbstract $task)
      */
@@ -163,10 +230,10 @@ final class RedisAsync extends BaseAsync
             return;
         }
         if (!count($channels)) {
-            setTimeout(function() use ($cb) {
+            setTimeout(function () use ($cb) {
                 $cb(null);
             }, 1e6);
-           return;
+            return;
         }
 
         $keys = [];

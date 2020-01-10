@@ -225,6 +225,7 @@ final class Redis extends Base
                 $pending->detach($prev);
                 $task = igbinary_unserialize($payload);
 
+                $ready->attach($task);
                 if ($task->hasException()) {
                     $failed->attach($task);
                 } else {

@@ -6,6 +6,7 @@ use Zer0\Exceptions\BaseException;
 use Zer0\Exceptions\InvalidStateException;
 use Zer0\Queue\Exceptions\RuntimeException;
 use Zer0\Queue\Pools\Base;
+use Zer0\Queue\Pools\BaseAsync;
 
 /**
  * Class TaskCollection
@@ -39,16 +40,40 @@ class TaskCollection
     protected $pool;
 
     /**
-     * TaskCollection constructor.
-     * @param TaskAbstract ...$args
+     * @var BaseAsync
      */
-    public function __construct(Base $pool)
+    protected $poolAsync;
+
+    /**
+     * TaskCollection constructor.
+     * @param TaskAbstract ...$tasks
+     */
+    public function __construct(...$tasks)
     {
-        $this->pool = $pool;
         $this->pending = new \SplObjectStorage;
         $this->successful = new \SplObjectStorage;
         $this->failed = new \SplObjectStorage;
         $this->ready = new \SplObjectStorage;
+
+        foreach ($tasks as $task) {
+            $this->add($task);
+        }
+    }
+
+    /**
+     * @param Base $pool
+     */
+    public function setPool(Base $pool): void
+    {
+        $this->pool = $pool;
+    }
+
+    /**
+     * @param BaseAsync $pool
+     */
+    public function setPoolAsync(BaseAsync $pool): void
+    {
+        $this->poolAsync = $pool;
     }
 
     /**
@@ -65,7 +90,11 @@ class TaskCollection
                 $this->successful->attach($task);
             }
         } else {
-            $this->pool->enqueue($task);
+            if ($this->poolAsync !== null) {
+                $this->poolAsync->enqueue($task);
+            } else {
+                $this->pool->enqueue($task);
+            }
             $this->pending->attach($task);
         }
         return $this;
@@ -110,12 +139,41 @@ class TaskCollection
     }
 
     /**
+     * @param callable $cb
+     * @return $this
+     */
+    public function callback(callable $cb): self
+    {
+        $this->callback = $cb;
+        if ($this->poolAsync !== null) {
+            $this->poolAsync->wait();
+        }
+        return $this;
+    }
+
+    /**
+     *
+     */
+    public function free(): self
+    {
+        $this->callback = null;
+        return $this;
+    }
+
+    /**
      * @param int $seconds
      * @return $this
      */
     public function wait(int $seconds = 3): self
     {
+        if ($this->poolAsync !== null) {
+            $this->poolAsync->waitCollection($this, $this->callback, $seconds);
+            return;
+        }
         $this->pool->waitCollection($this, $seconds);
+        if ($this->callback !== null) {
+            ($this->callback)($this);
+        }
         return $this;
     }
 
