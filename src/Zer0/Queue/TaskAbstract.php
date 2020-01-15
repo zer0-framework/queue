@@ -62,6 +62,15 @@ abstract class TaskAbstract
     }
 
     /**
+     * Shall the task be put in queue again if it is not complete when timeout exceeds?
+     * @return bool
+     */
+    public function requeueOnTimeout(): bool
+    {
+        return true;
+    }
+
+    /**
      * @throws RuntimeException
      * @throws \Throwable
      */

@@ -92,7 +92,7 @@ final class Redis extends Base
         if (!$autoId && $task->getTimeoutSeconds() > 0) {
             if ($this->redis->zAdd(
                 $this->prefix . ':channel-pending:' . $channel,
-                [$taskId . ':' . $task->getTimeoutSeconds() => time() + $task->getTimeoutSeconds()],
+                [$taskId => time() + $task->getTimeoutSeconds()],
                 'NX')) {
                 $this->redis->pipeline($pipeline);
             }
@@ -387,7 +387,7 @@ final class Redis extends Base
                 $this->redis->zrem(
                     $this->prefix . ':channel-pending:' . $channel,
                     [
-                        $task->getId() . ':' . $task->getTimeoutSeconds()
+                        $task->getId()
                     ]
                 );
             }

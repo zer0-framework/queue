@@ -84,7 +84,7 @@ final class RedisAsync extends BaseAsync
                 $this->prefix . ':channel-pending:' . $channel,
                 'NX',
                 time() + $task->getTimeoutSeconds(),
-                $taskId . ':' . $task->getTimeoutSeconds(),
+                $taskId,
                 function (RedisConnection $redis) use ($func, $task, $cb): void {
                     if (!$redis->result) {
                         if ($cb !== null) {
@@ -171,7 +171,7 @@ final class RedisAsync extends BaseAsync
 
         $cb($collection);
 
-        $this->redis->blpop(array_keys($hash), $timeout, function (RedisConnection  $redis) use ($collection, $cb) {
+        $this->redis->blpop(array_keys($hash), $timeout, function (RedisConnection $redis) use ($collection, $cb) {
             try {
                 $pop = $redis->result;
                 if ($pop === null) {
@@ -260,7 +260,6 @@ final class RedisAsync extends BaseAsync
                         }
                         try {
                             $task = igbinary_unserialize($redis->result);
-                            $task->setChannel($channel);
                             $cb($task);
                         } catch (\Throwable $e) {
                             $cb(null);
@@ -288,54 +287,52 @@ final class RedisAsync extends BaseAsync
     public function timedOutTasks(string $channel): void
     {
         $zset = $this->prefix . ':channel-pending:' . $channel;
-        $this->redis->watch($zset, function (RedisConnection $redis) use ($zset, $channel) {
-            $redis->zRangeByScore(
-                $zset,
-                '-inf',
-                time(),
-                'LIMIT',
-                0,
-                5,
-                function (RedisConnection $redis) use ($zset, $channel) {
-                    if (!$redis->result) {
-                        return;
-                    }
-                    if (!is_array($redis->result)) {
-                        Daemon::$process->log((string)new \Exception(
-                            'Expected array, given: ' . var_export($redis->result, true)
-                        ));
-                        return;
-                    }
-                    $zrange = $redis->result;
-                    $args = [];
-                    foreach ($zrange as $value) {
-                        list($taskId, $timeout) = explode(':', $value, 2);
-                        $args[] = $this->prefix . ':input:' . $taskId;
-                    }
-                    $args[] = function ($redis) use ($zset, $zrange, $channel) {
-                        $redis->multi();
-                        foreach ($zrange as $i => $value) {
-                            if ($redis->result[$i] === null) {
-                                $redis->zRem($zset, $value);
-                            } else {
-                                list($taskId, $timeout) = explode(':', $value, 2);
-
-                                if ($timeout === '0') {
-                                    continue;
-                                }
-                                $redis->zAdd($zset, time() + $timeout, $value);
-                                $redis->sAdd($this->prefix . ':list-channels', $channel);
-                                $redis->rPush($this->prefix . ':channel:' . $channel, $taskId);
-                            }
-                        }
-                        $redis->exec(function (RedisConnection $redis) use ($channel) {
-                            $this->timedOutTasks($channel);
-                        });
-                    };
-                    $redis->mget(...$args);
+        $this->redis->zRangeByScore(
+            $zset,
+            '-inf',
+            time(),
+            'LIMIT',
+            0,
+            1000,
+            function (RedisConnection $redis) use ($zset, $channel) {
+                if (!$redis->result) {
+                    return;
                 }
-            );
-        });
+                if (!is_array($redis->result)) {
+                    Daemon::$process->log((string)new \Exception(
+                        'Expected array, given: ' . var_export($redis->result, true)
+                    ));
+                    return;
+                }
+                $zrange = $redis->result;
+                $args = [];
+                foreach ($zrange as $value) {
+
+                    $taskId = $value;
+
+                    $redis->zRem($zset, $value, function (RedisConnection $redis) use ($taskId) {
+                        if (!$redis->result) {
+                            return;
+                        }
+                        $redis->get($this->prefix . ':input:' . $taskId, function (RedisConnection $redis) use ($taskId) {
+                            if (!$redis->result) {
+                                return;
+                            }
+                            try {
+                                /**
+                                 * @var $task TaskAbstract
+                                 */
+                                $task = igbinary_unserialize($redis->result);
+                                if ($task->requeueOnTimeout()) {
+                                    $this->enqueue($task);
+                                }
+                            } catch (\Throwable $e) {
+                            }
+                        });
+                    });
+                }
+            }
+        );
     }
 
     /**
@@ -355,7 +352,7 @@ final class RedisAsync extends BaseAsync
             $redis->publish($this->prefix . ':complete-channel:' . $channel, $payload);
             $redis->zRem(
                 $this->prefix . ':channel-pending:' . $channel,
-                $task->getId() . ':' . $task->getTimeoutSeconds()
+                $task->getId()
             );
             $redis->set($this->prefix . ':output:' . $taskId, $payload);
             $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
