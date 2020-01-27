@@ -168,7 +168,7 @@ class TaskCollection
     {
         if ($this->poolAsync !== null) {
             $this->poolAsync->waitCollection($this, $this->callback, $seconds);
-            return;
+            return $this;t com
         }
         $this->pool->waitCollection($this, $seconds);
         if ($this->callback !== null) {
