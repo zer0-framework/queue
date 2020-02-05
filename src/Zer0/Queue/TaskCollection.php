@@ -45,6 +45,11 @@ class TaskCollection
     protected $poolAsync;
 
     /**
+     * @var callable
+     */
+    protected $callback;
+
+    /**
      * TaskCollection constructor.
      * @param TaskAbstract ...$tasks
      */
