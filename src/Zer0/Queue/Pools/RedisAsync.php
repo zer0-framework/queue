@@ -242,8 +242,7 @@ final class RedisAsync extends BaseAsync
      * @param array|null $channels
      * @param callable   $cb (TaskAbstract $task)
      */
-    public
-    function poll (?array $channels = null, callable $cb): void
+    public function poll (?array $channels = null, callable $cb): void
     {
         if ($channels === null) {
             $this->listChannels(
@@ -314,8 +313,7 @@ final class RedisAsync extends BaseAsync
     /**
      * @param callable $cb (?array $channels)
      */
-    public
-    function listChannels (callable $cb): void
+    public function listChannels (callable $cb): void
     {
         $this->redis->sMembers(
             $this->prefix . ':list-channels',
@@ -330,8 +328,7 @@ final class RedisAsync extends BaseAsync
     /**
      * @param string $channel
      */
-    public
-    function timedOutTasks (string $channel): void
+    public function timedOutTasks (string $channel): void
     {
         $zset = $this->prefix . ':channel-pending:' . $channel;
         $this->redis->zRangeByScore(
@@ -395,8 +392,7 @@ final class RedisAsync extends BaseAsync
     /**
      * @param TaskAbstract $task
      */
-    public
-    function complete (TaskAbstract $task): void
+    public function complete (TaskAbstract $task): void
     {
         $payload = igbinary_serialize($task);
         $this->redis->multi(
@@ -405,6 +401,9 @@ final class RedisAsync extends BaseAsync
                     return;
                 }
                 $taskId = $task->getId();
+
+                $redis->set($this->prefix . ':output:' . $taskId, $payload);
+                $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
                 $redis->publish($this->prefix . ':output:' . $taskId, $payload);
 
                 $channel = $task->getChannel();
@@ -413,9 +412,6 @@ final class RedisAsync extends BaseAsync
                     $this->prefix . ':channel-pending:' . $channel,
                     $task->getId()
                 );
-                $redis->set($this->prefix . ':output:' . $taskId, $payload);
-                $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
-
                 $redis->rPush($this->prefix . ':blpop:' . $taskId, ...range(1, 10));
                 $redis->expire($this->prefix . ':blpop:' . $taskId, 10);
 

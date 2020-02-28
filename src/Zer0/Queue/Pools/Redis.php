@@ -373,13 +373,14 @@ final class Redis extends Base
     public function complete(TaskAbstract $task): void
     {
         $this->redis->pipeline(function (PipelineInterface $redis) use ($task) {
+            $redis->publish($this->prefix . ':output:' . $taskId, $payload);
+            $redis->set($this->prefix . ':output:' . $taskId, $payload, 15 * 60);
+
             $redis->multi();
 
             $taskId = $task->getId();
 
             $payload = igbinary_serialize($task);
-
-            $redis->publish($this->prefix . ':output:' . $taskId, $payload);
 
             $channel = $task->getChannel();
 
@@ -394,7 +395,6 @@ final class Redis extends Base
                 );
             }
 
-            $redis->set($this->prefix . ':output:' . $taskId, $payload, 15 * 60);
             $redis->rPush($this->prefix . ':blpop:' . $taskId, range(1, 10));
             $redis->expire($this->prefix . ':blpop:' . $taskId, 15 * 60);
             $redis->del($this->prefix . ':input:' . $taskId);
