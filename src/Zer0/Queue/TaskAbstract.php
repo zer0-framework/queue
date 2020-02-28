@@ -228,6 +228,13 @@ abstract class TaskAbstract
     }
 
     /**
+     * @param BaseException $exception
+     */
+    final public function setException(BaseException $exception): void
+    {
+        $this->exception = $exception;
+    }
+    /**
      * @param TaskAbstract $task
      * @return $this
      */

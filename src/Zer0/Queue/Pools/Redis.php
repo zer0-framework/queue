@@ -122,7 +122,7 @@ final class Redis extends Base
         ], function ($type, $chan, $data) use ($cb, $channel) {
             $event = null;
             if ($type === 'message') {
-                list($type, $eventChannel) = explode(':', substr($chan, strlen($this->prefix . ':')));
+                [$type, $eventChannel] = explode(':', substr($chan, strlen($this->prefix . ':')));
                 if ($channel !== $eventChannel) {
                     $event = null;
                 } elseif ($type === 'enqueue-channel') {
@@ -173,12 +173,9 @@ final class Redis extends Base
         return igbinary_unserialize($payload);
     }
 
-
     /**
      * @param TaskCollection $collection
-     * @param int $seconds
-     * @return void
-     * @throws WaitTimeoutException
+     * @param int            $seconds
      */
     public function waitCollection(TaskCollection $collection, int $seconds = 3): void
     {
@@ -216,21 +213,26 @@ final class Redis extends Base
             unset($hash[$key]);
 
             $taskId = $tasks[0]->getId();
-            $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
-            if ($payload === null) {
-                throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
-            }
 
             foreach ($tasks as $prev) {
                 $pending->detach($prev);
-                $task = igbinary_unserialize($payload);
+            }
 
-                $ready->attach($task);
-                if ($task->hasException()) {
-                    $failed->attach($task);
-                } else {
-                    $successful->attach($task);
-                }
+            $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
+            if ($payload !== null) {
+                $task = igbinary_unserialize($payload);
+            } else {
+                /**
+                 * @var $task TaskAbstract
+                 */
+                $task = $tasks[0];
+                $task->setException(new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist'));
+            }
+            $ready->attach($task);
+            if ($task->hasException()) {
+                $failed->attach($task);
+            } else {
+                $successful->attach($task);
             }
         }
     }
@@ -293,7 +295,7 @@ final class Redis extends Base
         );
         $keys = [];
         foreach ($items as $value) {
-            list($taskId, $timeout) = explode(':', $value);
+            [$taskId, $timeout] = explode(':', $value);
             $keys[] = $this->prefix . ':input:' . $taskId;
         }
         if (!$keys) {
@@ -346,12 +348,12 @@ final class Redis extends Base
         $res = $redis->zrangebyscore($zset, '-inf', time(), ['limit' => [0, 1]]);
         $keys = [];
         foreach ($res as $value) {
-            list($taskId, $timeout) = explode(':', $value, 2);
+            [$taskId, $timeout] = explode(':', $value, 2);
             $keys[] = $this->prefix . ':input:' . $taskId;
         }
         $mget = $redis->mget($keys);
         foreach ($res as $value) {
-            list($taskId, $timeout) = explode(':', $value, 2);
+            [$taskId, $timeout] = explode(':', $value, 2);
             if ($timeout === '0') {
                 continue;
             }
