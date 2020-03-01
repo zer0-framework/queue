@@ -179,11 +179,12 @@ class TaskCollection
     }
 
     /**
-     * @param int $seconds
+     * @param int $seconds = 3
+     * @param float $purgeTimeout = 0
      *
      * @return $this
      */
-    public function wait (int $seconds = 3): self
+    public function wait (int $seconds = 3, float $purgeTimeout = 0): self
     {
         if ($this->poolAsync !== null) {
             $this->poolAsync->waitCollection($this, $this->callback, $seconds);
@@ -191,6 +192,7 @@ class TaskCollection
             return $this;
         }
         $this->pool->waitCollection($this, $seconds);
+        $this->purgePending($taskTimeout);
         if ($this->callback !== null) {
             ($this->callback)($this);
         }
