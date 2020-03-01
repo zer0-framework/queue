@@ -192,7 +192,7 @@ class TaskCollection
             return $this;
         }
         $this->pool->waitCollection($this, $seconds);
-        $this->purgePending($taskTimeout);
+        $this->purgePending($purgeTimeout);
         if ($this->callback !== null) {
             ($this->callback)($this);
         }
