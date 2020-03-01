@@ -401,9 +401,6 @@ final class RedisAsync extends BaseAsync
                     return;
                 }
                 $taskId = $task->getId();
-
-                $redis->set($this->prefix . ':output:' . $taskId, $payload);
-                $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
                 $redis->publish($this->prefix . ':output:' . $taskId, $payload);
 
                 $channel = $task->getChannel();
@@ -412,6 +409,9 @@ final class RedisAsync extends BaseAsync
                     $this->prefix . ':channel-pending:' . $channel,
                     $task->getId()
                 );
+                $redis->set($this->prefix . ':output:' . $taskId, $payload);
+                $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
+
                 $redis->rPush($this->prefix . ':blpop:' . $taskId, ...range(1, 10));
                 $redis->expire($this->prefix . ':blpop:' . $taskId, 10);
 

@@ -10,6 +10,7 @@ use Zer0\Queue\Pools\BaseAsync;
 
 /**
  * Class TaskAbstract
+ *
  * @package Zer0\Queue
  */
 abstract class TaskAbstract
@@ -55,17 +56,31 @@ abstract class TaskAbstract
     protected $queuePool;
 
     /**
+     * @var float
+     */
+    protected $enqueuedAt;
+
+    /**
      *
      */
-    protected function before(): void
+    protected function before (): void
     {
     }
 
     /**
+     * @return float|null
+     */
+    public function getEnqueuedAt (): ?float
+    {
+        return $this->enqueuedAt;
+    }
+
+    /**
      * Shall the task be put in queue again if it is not complete when timeout exceeds?
+     *
      * @return bool
      */
-    public function requeueOnTimeout(): bool
+    public function requeueOnTimeout (): bool
     {
         return true;
     }
@@ -74,12 +89,12 @@ abstract class TaskAbstract
      * @throws RuntimeException
      * @throws \Throwable
      */
-    abstract protected function execute(): void;
+    abstract protected function execute (): void;
 
     /**
      * @param BaseAsync|null $pool
      */
-    final public function setQueuePool(?BaseAsync $pool): void
+    final public function setQueuePool (?BaseAsync $pool): void
     {
         $this->queuePool = $pool;
     }
@@ -87,14 +102,14 @@ abstract class TaskAbstract
     /**
      * @param TaskAbstract $previous
      */
-    public function previous(TaskAbstract $previous): void
+    public function previous (TaskAbstract $previous): void
     {
     }
 
     /**
      *
      */
-    protected function after(): void
+    protected function after (): void
     {
         foreach ($this->then as $task) {
             $task->previous($this);
@@ -105,15 +120,15 @@ abstract class TaskAbstract
     /**
      *
      */
-    public function beforeEnqueue(): void
+    public function beforeEnqueue (): void
     {
+        $this->enqueuedAt = microtime(true);
     }
-
 
     /**
      *
      */
-    protected function onException(): void
+    protected function onException (): void
     {
         // Subject to overload
     }
@@ -121,16 +136,15 @@ abstract class TaskAbstract
     /**
      * @return int
      */
-    public function getTimeoutSeconds(): int
+    public function getTimeoutSeconds (): int
     {
         return 0;
     }
 
-
     /**
      * @return null|string ?string
      */
-    final public function getId(): ?string
+    final public function getId (): ?string
     {
         return $this->_id;
     }
@@ -138,7 +152,7 @@ abstract class TaskAbstract
     /**
      * @return null|string ?string
      */
-    final public function getChannel(): ?string
+    final public function getChannel (): ?string
     {
         return $this->_channel ?? 'default';
     }
@@ -146,13 +160,15 @@ abstract class TaskAbstract
     /**
      * @param $id
      */
-    final public function setId(string $id): void
+    final public function setId (string $id): void
     {
         if ($id === '') {
             throw new InvalidArgumentException('$id cannot be empty');
         }
         if (!ctype_digit($id) && $this->getTimeoutSeconds() <= 0) {
-            throw new InvalidArgumentException('setId(): non-numeric id requires getTimeoutSeconds() to return an integer greater than 0');
+            throw new InvalidArgumentException(
+                'setId(): non-numeric id requires getTimeoutSeconds() to return an integer greater than 0'
+            );
         }
         $this->_id = $id;
     }
@@ -160,25 +176,27 @@ abstract class TaskAbstract
     /**
      * @param string $channel
      */
-    final public function setChannel(string $channel): void
+    final public function setChannel (string $channel): void
     {
         $this->_channel = $channel;
     }
 
     /**
      * @param callable $callback
+     *
      * @return self
      */
-    final public function setCallback(callable $callback): TaskAbstract
+    final public function setCallback (callable $callback): TaskAbstract
     {
         $this->callback = $callback;
+
         return $this;
     }
 
     /**
      * @return bool
      */
-    final public function invoked(): bool
+    final public function invoked (): bool
     {
         return $this->invoked;
     }
@@ -186,7 +204,7 @@ abstract class TaskAbstract
     /**
      * @throws InvalidStateException
      */
-    final public function __invoke()
+    final public function __invoke ()
     {
         if ($this->invoked) {
             throw new InvalidStateException('The task instance has already been invoked.');
@@ -205,9 +223,9 @@ abstract class TaskAbstract
     /**
      *
      */
-    final protected function complete(): void
+    final protected function complete (): void
     {
-        $callback = $this->callback;
+        $callback       = $this->callback;
         $this->callback = null;
         $this->after();
         $this->then = [];
@@ -217,10 +235,10 @@ abstract class TaskAbstract
     /**
      * @param BaseException $exception
      */
-    final public function exception(BaseException $exception): void
+    final public function exception (BaseException $exception): void
     {
-        $callback = $this->callback;
-        $this->callback = null;
+        $callback        = $this->callback;
+        $this->callback  = null;
         $this->exception = $exception;
         $this->onException();
         $this->after();
@@ -230,25 +248,27 @@ abstract class TaskAbstract
     /**
      * @param BaseException $exception
      */
-    final public function setException(BaseException $exception): void
+    final public function setException (BaseException $exception): void
     {
         $this->exception = $exception;
     }
+
     /**
      * @param TaskAbstract $task
+     *
      * @return $this
      */
-    final public function then(TaskAbstract $task): self
+    final public function then (TaskAbstract $task): self
     {
         $this->then[] = $task;
+
         return $this;
     }
-
 
     /**
      * @return null|\Throwable
      */
-    final public function getException(): ?\Throwable
+    final public function getException (): ?\Throwable
     {
         return $this->exception;
     }
@@ -256,7 +276,7 @@ abstract class TaskAbstract
     /**
      * @return bool
      */
-    final public function hasException(): bool
+    final public function hasException (): bool
     {
         return $this->exception !== null;
     }
@@ -265,7 +285,7 @@ abstract class TaskAbstract
      * @return TaskAbstract
      * @throws BaseException
      */
-    final public function throwException(): self
+    final public function throwException (): self
     {
         if ($this->exception !== null) {
             throw $this->exception;
@@ -274,11 +294,10 @@ abstract class TaskAbstract
         return $this;
     }
 
-
     /**
      * @return array
      */
-    final public function getLog(): array
+    final public function getLog (): array
     {
         return $this->log;
     }
@@ -286,7 +305,7 @@ abstract class TaskAbstract
     /**
      * @param mixed ...$args
      */
-    public function log(...$args): void
+    public function log (...$args): void
     {
         $this->log[] = sprintf(...$args);
     }
@@ -294,15 +313,18 @@ abstract class TaskAbstract
     /**
      * @return array
      */
-    public function getObjectVars(): array
+    public function getObjectVars (): array
     {
-        return array_diff_key(get_object_vars($this), [
-            '_channel' => true,
-            'callback' => true,
-            '_id' => true,
-            'invoked' => true,
-            'exception' => true,
-            'log' => true,
-        ]);
+        return array_diff_key(
+            get_object_vars($this),
+            [
+                '_channel'  => true,
+                'callback'  => true,
+                '_id'       => true,
+                'invoked'   => true,
+                'exception' => true,
+                'log'       => true,
+            ]
+        );
     }
 }
