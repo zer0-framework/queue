@@ -33,7 +33,12 @@ abstract class TaskAbstract
     /**
      * @var bool
      */
-    private $invoked = false;
+    protected $invoked = false;
+
+    /**
+     * @var bool
+     */
+    protected $finished = false;
 
     /**
      * @var RuntimeException
@@ -225,6 +230,10 @@ abstract class TaskAbstract
      */
     final protected function complete (): void
     {
+        if ($this->finished) {
+            return;
+        }
+        $this->finished = true;
         $callback       = $this->callback;
         $this->callback = null;
         $this->after();
@@ -237,6 +246,10 @@ abstract class TaskAbstract
      */
     final public function exception (BaseException $exception): void
     {
+        if ($this->finished) {
+            return;
+        }
+        $this->finished = true;
         $callback        = $this->callback;
         $this->callback  = null;
         $this->exception = $exception;
