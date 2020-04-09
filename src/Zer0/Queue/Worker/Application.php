@@ -53,6 +53,9 @@ final class Application extends \PHPDaemon\Core\AppInstance
                     $this->pool->timedOutTasks($channel);
                 }
             });
+
+            $this->pool->updateTimeouts($this->tasks);
+
             $timer->timeout(5e6);
         }, 1);
     }

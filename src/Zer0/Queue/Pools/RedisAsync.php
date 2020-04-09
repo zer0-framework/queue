@@ -2,6 +2,7 @@
 
 namespace Zer0\Queue\Pools;
 
+use Google\Cloud\Tasks\V2\Task;
 use PHPDaemon\Clients\Redis\Connection as RedisConnection;
 use PHPDaemon\Clients\Redis\Pool;
 use PHPDaemon\Core\Daemon;
@@ -41,6 +42,45 @@ final class RedisAsync extends BaseAsync
         parent::__construct($config, $app);
         $this->redis  = $this->app->broker('RedisAsync')->get($config->name ?? '');
         $this->prefix = $config->prefix ?? 'queue';
+    }
+
+    /**
+     * @param iterable $tasks
+     */
+    public function updateTimeouts (iterable $tasks): void
+    {
+        $this->redis->multi(function(RedisConnection $redis) use ($tasks): void {
+            foreach ($tasks as $task) {
+                /**
+                 * @var $task TaskAbstract
+                 */
+                $timeout = $task->getTimeoutSeconds();
+                if ($timeout > 0) {
+                    $redis->zAdd($zset, [$value => time() + $timeout]);
+                }
+                $redis->exec();
+            }
+        });
+    }
+
+    /**
+     * @param TaskAbstract $task
+     * @param string       $progress
+     */
+    public function setProgress(TaskAbstract $task, string $progress) {
+        $redis->zAdd($zset, [$value => time() + $timeout]);
+        $this->redis->publish($this->prefix . ':progress:' . $task->getId(), $progress);
+    }
+
+    /**
+     * @param TaskAbstract $task
+     * @param callable     $cb
+     */
+    public function subscribeProgress(TaskAbstract $task, callable $cb) {
+        $this->redis->subscribe($this->prefix . ':progress:' . $task->getId(), function(RedisConnection $redis) use ($cb): void {
+            $cb($redis->result);
+        });
+
     }
 
     /**
@@ -85,11 +125,12 @@ final class RedisAsync extends BaseAsync
             );
         };
 
-        if ($task->getTimeoutSeconds() > 0) {
+        $timeout = $task->getTimeoutSeconds();
+        if ($timeout > 0) {
             $this->redis->zadd(
                 $this->prefix . ':channel-pending:' . $channel,
                 'NX',
-                time() + $task->getTimeoutSeconds(),
+                time() + $timeout,
                 $taskId,
                 function (RedisConnection $redis) use ($func, $task, $cb): void {
                     if (!$redis->result) {

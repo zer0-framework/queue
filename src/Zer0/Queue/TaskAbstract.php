@@ -91,6 +91,14 @@ abstract class TaskAbstract
     }
 
     /**
+     * @return string
+     */
+    public function currentProgress (): string
+    {
+        return '';
+    }
+
+    /**
      * @throws RuntimeException
      * @throws \Throwable
      */
@@ -102,6 +110,17 @@ abstract class TaskAbstract
     final public function setQueuePool (?BaseAsync $pool): void
     {
         $this->queuePool = $pool;
+    }
+
+    /**
+     * @param string $progress
+     */
+    final public function setProgress(string $progress): void
+    {
+        if ($this->queuePool === null) {
+            return;
+        }
+        $this->queuePool->setProgress($this, $progress);
     }
 
     /**
@@ -249,7 +268,7 @@ abstract class TaskAbstract
         if ($this->finished) {
             return;
         }
-        $this->finished = true;
+        $this->finished  = true;
         $callback        = $this->callback;
         $this->callback  = null;
         $this->exception = $exception;
