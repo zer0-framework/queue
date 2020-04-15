@@ -56,7 +56,8 @@ final class RedisAsync extends BaseAsync
                  */
                 $timeout = $task->getTimeoutSeconds();
                 if ($timeout > 0) {
-                    $redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(), [$task->getId() => time() + $timeout]);
+                    $redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(),
+                        'XX', time() + $timeout,  $task->getId());
                 }
                 $redis->exec();
             }
@@ -70,7 +71,8 @@ final class RedisAsync extends BaseAsync
     public function setProgress(TaskAbstract $task, string $progress) {
         $timeout = $task->getTimeoutSeconds();
         if ($timeout > 0) {
-            $redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(), [$task->getId() => time() + $timeout]);
+            $redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(),
+                'XX', time() + $timeout,  $task->getId());
         }
         $this->redis->publish($this->prefix . ':progress:' . $task->getId(), $progress);
     }
