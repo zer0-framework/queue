@@ -2,6 +2,7 @@
 
 namespace Zer0\Queue\Pools;
 
+use RedisClient\Exception\EmptyResponseException;
 use RedisClient\Pipeline\PipelineInterface;
 use RedisClient\RedisClient;
 use Zer0\App;
@@ -200,10 +201,16 @@ final class Redis extends Base
             if (microtime(true) > $time + $seconds) {
                 return;
             }
-            $pop = $this->redis->blpop(array_keys($hash), 1);
-            if ($pop === null) {
+            try {
+                $pop = $this->redis->blpop(array_keys($hash), 1);
+
+                if ($pop === null) {
+                    continue;
+                }
+            } catch (EmptyResponseException $e) {
                 continue;
             }
+
             $key = array_key_first($pop);
 
             $tasks = $hash[$key] ?? null;
@@ -218,7 +225,17 @@ final class Redis extends Base
                 $pending->detach($prev);
             }
 
-            $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
+            $tries = 0;
+            payload:
+            try {
+                $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
+            } catch (EmptyResponseException $e) {
+                if (++$tries > 2) {
+                    $payload = null;
+                }
+                goto payload;
+            }
+
             if ($payload !== null) {
                 $task = igbinary_unserialize($payload);
             } else {
@@ -252,8 +269,13 @@ final class Redis extends Base
             $keys[] = $prefix . $chan;
         }
 
-        $reply = $this->redis->blpop($keys, 1);
-        if (!$reply) {
+        try {
+            $reply = $this->redis->blpop($keys, 1);
+
+            if (!$reply) {
+                return null;
+            }
+        } catch (EmptyResponseException $e) {
             return null;
         }
 
