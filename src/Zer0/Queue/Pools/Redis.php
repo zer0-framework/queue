@@ -176,9 +176,9 @@ final class Redis extends Base
 
     /**
      * @param TaskCollection $collection
-     * @param int            $seconds
+     * @param float            $timeout
      */
-    public function waitCollection(TaskCollection $collection, int $seconds = 3): void
+    public function waitCollection(TaskCollection $collection, float $timeout = 1): void
     {
         $hash = [];
         $pending = $collection->pending();

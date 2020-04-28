@@ -17,22 +17,22 @@ use Zer0\Queue\Pools\BaseAsync;
 class TaskCollection
 {
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $pending;
 
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $successful;
 
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $failed;
 
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $ready;
 
@@ -179,20 +179,22 @@ class TaskCollection
     }
 
     /**
-     * @param int $seconds = 1
+     * @param int $timeout = 1
      * @param float $purgeTimeout = 0
      *
      * @return $this
      */
-    public function wait (int $seconds = 1, float $purgeTimeout = 0): self
+    public function wait (int $timeout = 1, float $purgeTimeout = 0): self
     {
         if ($this->poolAsync !== null) {
             $this->poolAsync->waitCollection($this, $this->callback, $seconds);
 
             return $this;
         }
-        $this->pool->waitCollection($this, $seconds);
-        $this->purgePending($purgeTimeout);
+        $this->pool->waitCollection($this, $timeout);
+        if ($purgePending > 0) {
+            $this->purgePending($purgeTimeout);
+        }
         if ($this->callback !== null) {
             ($this->callback)($this);
         }
@@ -205,8 +207,12 @@ class TaskCollection
      *
      * @return $this
      */
-    public function purgePending (float $timeout = 0): self
+    public function purgePending (float $timeout): self
     {
+        if ($timeout <= 0) {
+            throw new \InvalidArgumentException('timeout must be greater than zero');
+        }
+
         $time = microtime(true);
         foreach ($this->pending as $task) {
             /**
@@ -243,33 +249,33 @@ class TaskCollection
     }
 
     /**
-     * @return \SplObjectStorage
+     * @return ObjectStorage
      */
-    public function pending (): \SplObjectStorage
+    public function pending (): ObjectStorage
     {
         return $this->pending;
     }
 
     /**
-     * @return \SplObjectStorage
+     * @return ObjectStorage
      */
-    public function successful (): \SplObjectStorage
+    public function successful (): ObjectStorage
     {
         return $this->successful;
     }
 
     /**
-     * @return \SplObjectStorage
+     * @return ObjectStorage
      */
-    public function failed (): \SplObjectStorage
+    public function failed (): ObjectStorage
     {
         return $this->failed;
     }
 
     /**
-     * @return \SplObjectStorage
+     * @return ObjectStorage
      */
-    public function ready (): \SplObjectStorage
+    public function ready (): ObjectStorage
     {
         return $this->ready;
     }

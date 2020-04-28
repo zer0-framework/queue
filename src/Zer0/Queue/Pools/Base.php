@@ -78,10 +78,10 @@ abstract class Base
 
     /**
      * @param TaskCollection $collection
-     * @param int $seconds
+     * @param float $timeout
      * @return void
      */
-    abstract public function waitCollection(TaskCollection $collection, int $seconds = 3): void;
+    abstract public function waitCollection(TaskCollection $collection, float $timeout = 1): void;
 
     /**
      * @param TaskAbstract ...$tasks
