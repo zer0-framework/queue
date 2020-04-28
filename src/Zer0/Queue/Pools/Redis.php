@@ -194,12 +194,17 @@ final class Redis extends Base
             $item[] = $task;
         }
         $time = microtime(true);
+        $first = true;
         for (; ;) {
             if (!$hash) {
                 return;
             }
-            if (microtime(true) > $time + $seconds) {
-                return;
+            if (!$first) {
+                if (microtime(true) > $time + $seconds) {
+                    return;
+                }
+            } else {
+                $first = false;
             }
             try {
                 $pop = $this->redis->blpop(array_keys($hash), 1);

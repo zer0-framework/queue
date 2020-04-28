@@ -58,10 +58,10 @@ class TaskCollection
      */
     public function __construct (...$tasks)
     {
-        $this->pending    = new \SplObjectStorage;
-        $this->successful = new \SplObjectStorage;
-        $this->failed     = new \SplObjectStorage;
-        $this->ready      = new \SplObjectStorage;
+        $this->pending    = new ObjectStorage;
+        $this->successful = new ObjectStorage;
+        $this->failed     = new ObjectStorage;
+        $this->ready      = new ObjectStorage;
 
         foreach ($tasks as $task) {
             $this->add($task);
