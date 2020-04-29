@@ -197,7 +197,7 @@ final class Redis extends Base
                 return;
             }
             if (!$first) {
-                if (microtime(true) > $time + $seconds) {
+                if (microtime(true) > $time + $timeout) {
                     return;
                 }
             } else {
