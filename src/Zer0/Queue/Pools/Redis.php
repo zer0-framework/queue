@@ -54,8 +54,10 @@ final class Redis extends Base
 
     /**
      * @param TaskAbstract $task
+     *
      * @return TaskAbstract
      * @throws \RedisClient\Exception\InvalidArgumentException
+     * @throws \Zer0\Exceptions\InvalidArgumentException
      */
     public function enqueue(TaskAbstract $task): TaskAbstract
     {
@@ -142,7 +144,7 @@ final class Redis extends Base
     }
 
     /**
-     * @return int
+     * {@inheritdoc}
      */
     public function nextId(): int
     {
@@ -150,11 +152,7 @@ final class Redis extends Base
     }
 
     /**
-     * @param TaskAbstract $task
-     * @param int $timeout
-     * @return TaskAbstract
-     * @throws IncorrectStateException
-     * @throws WaitTimeoutException
+     * {@inheritdoc}
      */
     public function wait(TaskAbstract $task, int $timeout = 3): TaskAbstract
     {
@@ -175,8 +173,7 @@ final class Redis extends Base
     }
 
     /**
-     * @param TaskCollection $collection
-     * @param float            $timeout
+     * {@inheritdoc}
      */
     public function waitCollection(TaskCollection $collection, float $timeout = 1): void
     {
@@ -260,8 +257,7 @@ final class Redis extends Base
     }
 
     /**
-     * @param array|null $channels
-     * @return null|TaskAbstract
+     * {@inheritdoc}
      */
     public function poll(?array $channels = null): ?TaskAbstract
     {
@@ -300,7 +296,7 @@ final class Redis extends Base
     }
 
     /**
-     * @return array
+     * {@inheritdoc}
      */
     public function listChannels(): array
     {

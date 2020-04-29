@@ -36,6 +36,8 @@ abstract class Base
     }
 
     /**
+     * Assign a sequential ID to $task if it's not assigned
+     *
      * @param TaskAbstract $task
      */
     public function assignId(TaskAbstract $task): void
@@ -46,12 +48,16 @@ abstract class Base
     }
 
     /**
+     * Push $task into the queue
+     *
      * @param TaskAbstract $task
      * @return TaskAbstract
      */
     abstract public function enqueue(TaskAbstract $task): TaskAbstract;
 
     /**
+     * Push $task into the queue and wait either until $task is ready or until $seconds timeout expires
+     *
      * @param TaskAbstract $task
      * @param int $seconds
      * @return TaskAbstract
@@ -64,11 +70,15 @@ abstract class Base
     }
 
     /**
+     * Get a sequential task ID
+     *
      * @return int
      */
     abstract public function nextId(): int;
 
     /**
+     * Wait either until $task is ready or until $seconds timeout expires
+     *
      * @param TaskAbstract $task
      * @param int $seconds
      * @return TaskAbstract
@@ -77,6 +87,8 @@ abstract class Base
     abstract public function wait(TaskAbstract $task, int $seconds = 3): TaskAbstract;
 
     /**
+     * Wait either until all tasks in $collection are ready or until $timeout expires
+     *
      * @param TaskCollection $collection
      * @param float $timeout
      * @return void
@@ -84,6 +96,8 @@ abstract class Base
     abstract public function waitCollection(TaskCollection $collection, float $timeout = 1): void;
 
     /**
+     * Make a collection
+     *
      * @param TaskAbstract ...$tasks
      * @return TaskCollection
      */
@@ -95,22 +109,30 @@ abstract class Base
     }
 
     /**
+     * Called when $task is complete
+     *
      * @param TaskAbstract $task
      */
     abstract public function complete(TaskAbstract $task): void;
 
     /**
+     * Pop the queue
+     *
      * @param array|null $channels
      * @return null|TaskAbstract
      */
     abstract public function poll(?array $channels = null): ?TaskAbstract;
 
     /**
+     * Get a list of channels
+     *
      * @return array
      */
     abstract public function listChannels(): array;
 
     /**
+     * Take care of timed-out tasks
+     *
      * @param string $channel
      * @return
      */

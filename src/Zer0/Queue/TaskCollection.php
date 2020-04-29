@@ -85,6 +85,8 @@ class TaskCollection
     }
 
     /**
+     * Add a new task into the collection
+     *
      * @param TaskAbstract $task
      *
      * @return $this
@@ -114,6 +116,8 @@ class TaskCollection
     }
 
     /**
+     * Check if the collection has no tasks (pending or ready)
+     *
      * @return bool
      */
     public function isEmpty (): bool
@@ -146,6 +150,8 @@ class TaskCollection
     }
 
     /**
+     * Check if the collection has pending tasks
+     *
      * @return bool
      */
     public function hasPending (): bool
@@ -154,7 +160,9 @@ class TaskCollection
     }
 
     /**
-     * @param callable $cb
+     * Set a callback
+     *
+     * @param callable(TaskCollection) $cb
      *
      * @return $this
      */
@@ -169,7 +177,9 @@ class TaskCollection
     }
 
     /**
+     * Clean up internal circular references
      *
+     * @return $this
      */
     public function free (): self
     {
@@ -179,7 +189,9 @@ class TaskCollection
     }
 
     /**
-     * @param int $timeout = 1
+     * Wait either until all tasks are ready or until $timeout expires
+     *
+     * @param int $timeout = 1 Seconds to wait
      * @param float $purgeTimeout = 0
      *
      * @return $this
@@ -203,7 +215,7 @@ class TaskCollection
     }
 
     /**
-     * Purge
+     * Purge pending tasks that have been in the pending state for at least $timeout seconds
      *
      * @param float $timeout
      *
@@ -240,6 +252,8 @@ class TaskCollection
     }
 
     /**
+     * Remove $task from all collections
+     *
      * @param TaskAbstract $task
      */
     public function unlink (TaskAbstract $task): void
@@ -251,6 +265,8 @@ class TaskCollection
     }
 
     /**
+     * Get the collection of pending tasks
+     *
      * @return ObjectStorage
      */
     public function pending (): ObjectStorage
@@ -259,6 +275,8 @@ class TaskCollection
     }
 
     /**
+     * Get the collection of successful tasks
+     *
      * @return ObjectStorage
      */
     public function successful (): ObjectStorage
@@ -267,6 +285,8 @@ class TaskCollection
     }
 
     /**
+     * Get the collection of failed tasks
+     *
      * @return ObjectStorage
      */
     public function failed (): ObjectStorage
@@ -275,6 +295,8 @@ class TaskCollection
     }
 
     /**
+     * Get the collection of ready tasks
+     *
      * @return ObjectStorage
      */
     public function ready (): ObjectStorage
