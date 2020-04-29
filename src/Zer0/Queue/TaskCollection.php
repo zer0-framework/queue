@@ -192,7 +192,7 @@ class TaskCollection
             return $this;
         }
         $this->pool->waitCollection($this, $timeout);
-        if ($purgePending > 0) {
+        if ($purgeTimeout > 0) {
             $this->purgePending($purgeTimeout);
         }
         if ($this->callback !== null) {
@@ -203,6 +203,8 @@ class TaskCollection
     }
 
     /**
+     * Purge
+     *
      * @param float $timeout
      *
      * @return $this
