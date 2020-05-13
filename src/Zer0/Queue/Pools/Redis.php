@@ -54,8 +54,10 @@ final class Redis extends Base
 
     /**
      * @param TaskAbstract $task
+     *
      * @return TaskAbstract
      * @throws \RedisClient\Exception\InvalidArgumentException
+     * @throws \Zer0\Exceptions\InvalidArgumentException
      */
     public function enqueue(TaskAbstract $task): TaskAbstract
     {
@@ -142,7 +144,7 @@ final class Redis extends Base
     }
 
     /**
-     * @return int
+     * {@inheritdoc}
      */
     public function nextId(): int
     {
@@ -150,11 +152,7 @@ final class Redis extends Base
     }
 
     /**
-     * @param TaskAbstract $task
-     * @param int $timeout
-     * @return TaskAbstract
-     * @throws IncorrectStateException
-     * @throws WaitTimeoutException
+     * {@inheritdoc}
      */
     public function wait(TaskAbstract $task, int $timeout = 3): TaskAbstract
     {
@@ -175,10 +173,9 @@ final class Redis extends Base
     }
 
     /**
-     * @param TaskCollection $collection
-     * @param int            $seconds
+     * {@inheritdoc}
      */
-    public function waitCollection(TaskCollection $collection, int $seconds = 3): void
+    public function waitCollection(TaskCollection $collection, float $timeout = 1): void
     {
         $hash = [];
         $pending = $collection->pending();
@@ -194,12 +191,17 @@ final class Redis extends Base
             $item[] = $task;
         }
         $time = microtime(true);
+        $first = true;
         for (; ;) {
             if (!$hash) {
                 return;
             }
-            if (microtime(true) > $time + $seconds) {
-                return;
+            if (!$first) {
+                if (microtime(true) > $time + $timeout) {
+                    return;
+                }
+            } else {
+                $first = false;
             }
             try {
                 $pop = $this->redis->blpop(array_keys($hash), 1);
@@ -255,8 +257,7 @@ final class Redis extends Base
     }
 
     /**
-     * @param array|null $channels
-     * @return null|TaskAbstract
+     * {@inheritdoc}
      */
     public function poll(?array $channels = null): ?TaskAbstract
     {
@@ -295,7 +296,7 @@ final class Redis extends Base
     }
 
     /**
-     * @return array
+     * {@inheritdoc}
      */
     public function listChannels(): array
     {

@@ -216,9 +216,9 @@ final class RedisAsync extends BaseAsync
     /**
      * @param TaskCollection $collection
      * @param callable       $cb
-     * @param int            $timeout
+     * @param float            $timeout
      */
-    public function waitCollection (TaskCollection $collection, callable $cb, int $timeout = 3): void
+    public function waitCollection (TaskCollection $collection, callable $cb, float $timeout = 1): void
     {
         $hash = [];
         foreach ($collection->pending() as $task) {

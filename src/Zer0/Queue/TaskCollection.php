@@ -17,22 +17,22 @@ use Zer0\Queue\Pools\BaseAsync;
 class TaskCollection
 {
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $pending;
 
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $successful;
 
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $failed;
 
     /**
-     * @var \SplObjectStorage
+     * @var ObjectStorage
      */
     protected $ready;
 
@@ -58,10 +58,10 @@ class TaskCollection
      */
     public function __construct (...$tasks)
     {
-        $this->pending    = new \SplObjectStorage;
-        $this->successful = new \SplObjectStorage;
-        $this->failed     = new \SplObjectStorage;
-        $this->ready      = new \SplObjectStorage;
+        $this->pending    = new ObjectStorage;
+        $this->successful = new ObjectStorage;
+        $this->failed     = new ObjectStorage;
+        $this->ready      = new ObjectStorage;
 
         foreach ($tasks as $task) {
             $this->add($task);
@@ -85,6 +85,8 @@ class TaskCollection
     }
 
     /**
+     * Add a new task into the collection
+     *
      * @param TaskAbstract $task
      *
      * @return $this
@@ -114,6 +116,8 @@ class TaskCollection
     }
 
     /**
+     * Check if the collection has no tasks (pending or ready)
+     *
      * @return bool
      */
     public function isEmpty (): bool
@@ -146,6 +150,8 @@ class TaskCollection
     }
 
     /**
+     * Check if the collection has pending tasks
+     *
      * @return bool
      */
     public function hasPending (): bool
@@ -154,7 +160,9 @@ class TaskCollection
     }
 
     /**
-     * @param callable $cb
+     * Set a callback
+     *
+     * @param callable(TaskCollection) $cb
      *
      * @return $this
      */
@@ -169,7 +177,9 @@ class TaskCollection
     }
 
     /**
+     * Clean up internal circular references
      *
+     * @return $this
      */
     public function free (): self
     {
@@ -179,20 +189,24 @@ class TaskCollection
     }
 
     /**
-     * @param int $seconds = 1
+     * Wait either until all tasks are ready or until $timeout expires
+     *
+     * @param int $timeout = 1 Seconds to wait
      * @param float $purgeTimeout = 0
      *
      * @return $this
      */
-    public function wait (int $seconds = 1, float $purgeTimeout = 0): self
+    public function wait (int $timeout = 1, float $purgeTimeout = 0): self
     {
         if ($this->poolAsync !== null) {
             $this->poolAsync->waitCollection($this, $this->callback, $seconds);
 
             return $this;
         }
-        $this->pool->waitCollection($this, $seconds);
-        $this->purgePending($purgeTimeout);
+        $this->pool->waitCollection($this, $timeout);
+        if ($purgeTimeout > 0) {
+            $this->purgePending($purgeTimeout);
+        }
         if ($this->callback !== null) {
             ($this->callback)($this);
         }
@@ -201,12 +215,18 @@ class TaskCollection
     }
 
     /**
+     * Purge pending tasks that have been in the pending state for at least $timeout seconds
+     *
      * @param float $timeout
      *
      * @return $this
      */
-    public function purgePending (float $timeout = 0): self
+    public function purgePending (float $timeout): self
     {
+        if ($timeout <= 0) {
+            throw new \InvalidArgumentException('timeout must be greater than zero');
+        }
+
         $time = microtime(true);
         foreach ($this->pending as $task) {
             /**
@@ -232,6 +252,8 @@ class TaskCollection
     }
 
     /**
+     * Remove $task from all collections
+     *
      * @param TaskAbstract $task
      */
     public function unlink (TaskAbstract $task): void
@@ -243,33 +265,41 @@ class TaskCollection
     }
 
     /**
-     * @return \SplObjectStorage
+     * Get the collection of pending tasks
+     *
+     * @return ObjectStorage
      */
-    public function pending (): \SplObjectStorage
+    public function pending (): ObjectStorage
     {
         return $this->pending;
     }
 
     /**
-     * @return \SplObjectStorage
+     * Get the collection of successful tasks
+     *
+     * @return ObjectStorage
      */
-    public function successful (): \SplObjectStorage
+    public function successful (): ObjectStorage
     {
         return $this->successful;
     }
 
     /**
-     * @return \SplObjectStorage
+     * Get the collection of failed tasks
+     *
+     * @return ObjectStorage
      */
-    public function failed (): \SplObjectStorage
+    public function failed (): ObjectStorage
     {
         return $this->failed;
     }
 
     /**
-     * @return \SplObjectStorage
+     * Get the collection of ready tasks
+     *
+     * @return ObjectStorage
      */
-    public function ready (): \SplObjectStorage
+    public function ready (): ObjectStorage
     {
         return $this->ready;
     }

@@ -22,7 +22,12 @@ class QueueAsync extends Base
      */
     public function instantiate(ConfigInterface $config): \Zer0\Queue\Pools\BaseAsync
     {
-        $class = ClassFinder::find($config->type . 'Async', ClassFinder::getNamespace(\Zer0\Queue\Pools\BaseAsync::class), '~');
+        if ($config->type === 'ExtRedis') {
+            $find = 'RedisAsync';
+        } else {
+            $find = $config->type . 'Async';
+        }
+        $class = ClassFinder::find($find, ClassFinder::getNamespace(\Zer0\Queue\Pools\BaseAsync::class), '~');
         return new $class($config, $this->app);
     }
 
