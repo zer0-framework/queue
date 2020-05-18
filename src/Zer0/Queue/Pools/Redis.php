@@ -197,6 +197,10 @@ final class Redis extends Base
                 return;
             }
             if (!$first) {
+                if ($popped > 0) { // Redis BLPOP latency fix
+                    return;
+                }
+
                 if (microtime(true) > $time + $timeout) {
                     return;
                 }
@@ -220,6 +224,8 @@ final class Redis extends Base
                 continue;
             }
             unset($hash[$key]);
+
+            ++$popped;
 
             $taskId = $tasks[0]->getId();
 

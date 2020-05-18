@@ -124,7 +124,6 @@ final class ExtRedis extends Base
         if ($this->pubSubRedis === null) {
             $broker            = $this->app->broker('ExtRedis');
             $config            = clone $broker->getConfig();
-            $config->timeout   = 0.01;
             $this->pubSubRedis = $broker->instantiate($config);
         }
         try {
@@ -208,11 +207,16 @@ final class ExtRedis extends Base
         }
         $time  = microtime(true);
         $first = true;
+        $popped = 0;
         for (; ;) {
             if (!$hash) {
                 return;
             }
             if (!$first) {
+                if ($popped > 0) { // Redis BLPOP latency fix
+                    return;
+                }
+
                 if (microtime(true) > $time + $timeout) {
                     return;
                 }
@@ -238,6 +242,8 @@ final class ExtRedis extends Base
                 continue;
             }
             unset($hash[$key]);
+
+            ++$popped;
 
             $taskId = $tasks[0]->getId();
 
