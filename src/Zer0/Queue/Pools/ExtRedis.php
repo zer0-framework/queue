@@ -127,7 +127,8 @@ final class ExtRedis extends Base
             $this->pubSubRedis = $broker->instantiate($config);
         }
         try {
-            $this->pubSubRedis->subscribe(
+            start:
+            $return = $this->pubSubRedis->subscribe(
                 [
                     $this->prefix . ':enqueue-channel:' . $channel,
                     $this->prefix . ':complete-channel:' . $channel,
@@ -154,6 +155,9 @@ final class ExtRedis extends Base
                     return $cb($event, $event !== null ? $data : null);
                 }
             );
+            if ($return === null) {
+                goto start;
+            }
         } catch (\RedisException $e) {
         }
     }
