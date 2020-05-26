@@ -6,6 +6,7 @@ use PHPDaemon\Core\Daemon;
 use PHPDaemon\Core\Timer;
 use Zer0\App;
 use Zer0\Queue\Pools\BaseAsync;
+use Zer0\Queue\SomeTask;
 use Zer0\Queue\TaskAbstract;
 
 /**
@@ -35,6 +36,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
      */
     public function onReady()
     {
+
         $app = null;
         require ZERO_ROOT . '/vendor/zer0-framework/core/src/bootstrap.php';
 

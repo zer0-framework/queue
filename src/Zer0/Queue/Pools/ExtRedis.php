@@ -179,16 +179,20 @@ final class ExtRedis extends Base
         if ($taskId === null) {
             throw new IncorrectStateException('\'id\' property must be set before wait() is called');
         }
-        if (!$this->redis->blpop([$this->prefix . ':blpop:' . $taskId], $timeout)) {
+        try {
+            if (!$this->redis->blpop([$this->prefix . ':blpop:' . $taskId], $timeout)) {
+                throw new WaitTimeoutException;
+            }
+
+            $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
+            if ($payload === false) {
+                throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
+            }
+
+            return igbinary_unserialize($payload);
+        } catch (\RedisException $e) {
             throw new WaitTimeoutException;
         }
-
-        $payload = $this->redis->get($this->prefix . ':output:' . $taskId);
-        if ($payload === false) {
-            throw new IncorrectStateException($this->prefix . ':output:' . $taskId . ' key does not exist');
-        }
-
-        return igbinary_unserialize($payload);
     }
 
     /**
@@ -209,8 +213,8 @@ final class ExtRedis extends Base
             }
             $item[] = $task;
         }
-        $time  = microtime(true);
-        $first = true;
+        $time   = microtime(true);
+        $first  = true;
         $popped = 0;
         for (; ;) {
             if (!$hash) {
@@ -302,7 +306,11 @@ final class ExtRedis extends Base
             $keys[] = $prefix . $chan;
         }
 
-        $reply = $this->redis->blpop($keys, 1);
+        try {
+            $reply = $this->redis->blpop($keys, 1);
+        } catch (\RedisException $e) {
+            return null;
+        }
 
         if (!$reply) {
             return null;
@@ -375,12 +383,12 @@ final class ExtRedis extends Base
      */
     public function getChannelStats (string $channel): array
     {
-        $redis               = $this->redis->pipeline();
+        $redis = $this->redis->pipeline();
         $redis->multi();
         $redis->get($this->prefix . ':channel-total:' . $channel); // Total
         $redis->llen($this->prefix . ':channel:' . $channel);   // Backlog
         $redis->exec();
-        $res = $redis->exec()[0];
+        $res               = $redis->exec()[0];
         $stats             = [
             'total'   => (int)$res[0],
             'backlog' => $res[1],
