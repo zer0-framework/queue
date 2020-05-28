@@ -115,7 +115,7 @@ abstract class TaskAbstract
     /**
      * @param string $progress
      */
-    final public function setProgress(string $progress): void
+    final public function setProgress (string $progress): void
     {
         if ($this->queuePool === null) {
             return;
@@ -350,12 +350,16 @@ abstract class TaskAbstract
         return array_diff_key(
             get_object_vars($this),
             [
-                '_channel'  => true,
-                'callback'  => true,
-                '_id'       => true,
-                'invoked'   => true,
-                'exception' => true,
-                'log'       => true,
+                '_channel'   => true,
+                'callback'   => true,
+                '_id'        => true,
+                'invoked'    => true,
+                'finished'   => true,
+                'queuePool'  => true,
+                'enqueuedAt' => true,
+                'exception'  => true,
+                'log'        => true,
+                'then'       => true,
             ]
         );
     }
