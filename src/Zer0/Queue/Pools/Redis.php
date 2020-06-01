@@ -160,7 +160,12 @@ final class Redis extends Base
         if ($taskId === null) {
             throw new IncorrectStateException('\'id\' property must be set before wait() is called');
         }
-        if (!$this->redis->blpop([$this->prefix . ':blpop:' . $taskId], $timeout)) {
+
+        try {
+            if (!$this->redis->blpop([$this->prefix . ':blpop:' . $taskId], $timeout)) {
+                throw new WaitTimeoutException;
+            }
+        }  catch (EmptyResponseException $e) {
             throw new WaitTimeoutException;
         }
 
