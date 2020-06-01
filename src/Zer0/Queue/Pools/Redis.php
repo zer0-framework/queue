@@ -192,6 +192,7 @@ final class Redis extends Base
         }
         $time = microtime(true);
         $first = true;
+        $popped = 0;
         for (; ;) {
             if (!$hash) {
                 return;
