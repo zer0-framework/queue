@@ -37,12 +37,12 @@ final class Application extends \PHPDaemon\Core\AppInstance
     public function onReady()
     {
 
-        $app = null;
-        require ZERO_ROOT . '/vendor/zer0-framework/core/src/bootstrap.php';
 
-        define('ZERO_ASYNC', 1);
+        require_once ZERO_ROOT . '/vendor/zer0-framework/core/src/bootstrap.php';
 
-        $this->app = $app;
+        defined('ZERO_ASYNC') || define('ZERO_ASYNC', 1);
+
+        $this->app = App::instance();
 
         $this->tasks = new \SplObjectStorage;
 
@@ -67,7 +67,8 @@ final class Application extends \PHPDaemon\Core\AppInstance
      */
     public function poll()
     {
-        $this->pool->poll($this->config->channels->value ?? null, function (?TaskAbstract $task) {
+        $channels = $this->config->channels->value;
+        $this->pool->poll($channels ? (array) $channels : null, function (?TaskAbstract $task) {
             try {
                 if (!$task) {
                     return;
