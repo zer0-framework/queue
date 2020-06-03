@@ -114,6 +114,43 @@ final class ExtRedis extends Base
     }
 
     /**
+     * @param string $channel
+     * @param callable $cb
+     * @throws \RedisClient\Exception\InvalidArgumentException
+     */
+    public function subscribeCompat(string $channel, callable $cb): void
+    {
+        if ($this->pubSubRedis === null) {
+            $broker = $this->app->broker('Redis');
+            $config = clone $broker->getConfig();
+            $config->timeout = 0.01;
+            $this->pubSubRedis = $broker->instantiate($config);
+        }
+        $this->pubSubRedis->subscribe([
+            $this->prefix . ':enqueue-channel:' . $channel,
+            $this->prefix . ':complete-channel:' . $channel,
+        ], function ($type, $chan, $data) use ($cb, $channel) {
+            $event = null;
+            if ($type === 'message') {
+                [$type, $eventChannel] = explode(':', substr($chan, strlen($this->prefix . ':')));
+                if ($channel !== $eventChannel) {
+                    $event = null;
+                } elseif ($type === 'enqueue-channel') {
+                    $event = 'new';
+                } elseif ($type === 'complete-channel') {
+                    $event = 'complete';
+                }
+                try {
+                    $data = igbinary_unserialize($data);
+                } catch (\ErrorException $e) {
+                    $event = null;
+                }
+            }
+            return $cb($event, $event !== null ? $data : null);
+        });
+    }
+
+    /**
      * @param string   $channel
      * @param callable $cb
      *
@@ -121,6 +158,9 @@ final class ExtRedis extends Base
      */
     public function subscribe (string $channel, callable $cb): void
     {
+        $this->subscribeCompat($channel, $cb);
+        return;
+        
         if ($this->pubSubRedis === null) {
             $broker            = $this->app->broker('ExtRedis');
             $config            = clone $broker->getConfig();
