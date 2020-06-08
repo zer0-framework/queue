@@ -82,7 +82,7 @@ final class Queue extends AbstractController
             }
             $this->cli->errorLine($output);
         }
-        $this->cli->colorfulJson($task);
+        $this->cli->colorfulJson($task->getObjectVars());
         $this->cli->writeln('');
         if ($debug) {
             $this->cli->writeln('');
@@ -142,7 +142,7 @@ final class Queue extends AbstractController
             $task->setChannel('test');
             $task->test = mt_rand(0, 10);
             $this->queue->enqueue($task);
-            $this->cli->colorfulJson($task);
+            $this->cli->colorfulJson($task->getObjectVars());
             $this->cli->writeln('');
             usleep(0.1 * 1e6);
         }
