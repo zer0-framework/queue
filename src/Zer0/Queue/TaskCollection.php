@@ -221,10 +221,10 @@ class TaskCollection
      *
      * @return $this
      */
-    public function purgePending (float $timeout): self
+    public function purgePending (float $timeout = 0): self
     {
-        if ($timeout <= 0) {
-            throw new \InvalidArgumentException('timeout must be greater than zero');
+        if ($timeout < 0) {
+            throw new \InvalidArgumentException('timeout cannot be less than zero');
         }
 
         $time = microtime(true);

@@ -240,11 +240,8 @@ final class ExtRedis extends Base
      */
     public function waitCollection (TaskCollection $collection, float $timeout = 1): void
     {
-        $hash       = [];
         $pending    = $collection->pending();
-        $successful = $collection->successful();
-        $ready      = $collection->ready();
-        $failed     = $collection->failed();
+        $hash       = [];
         foreach ($pending as $task) {
             $key  = $this->prefix . ':blpop:' . $task->getId();
             $item =& $hash[$key];
@@ -253,6 +250,12 @@ final class ExtRedis extends Base
             }
             $item[] = $task;
         }
+        if (!$hash) {
+            return;
+        }
+        $successful = $collection->successful();
+        $ready      = $collection->ready();
+        $failed     = $collection->failed();
         $time   = microtime(true);
         $first  = true;
         $popped = 0;
