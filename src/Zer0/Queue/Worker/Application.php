@@ -11,6 +11,7 @@ use Zer0\Queue\TaskAbstract;
 
 /**
  * Class Application
+ *
  * @package InterpalsD
  */
 final class Application extends \PHPDaemon\Core\AppInstance
@@ -32,11 +33,11 @@ final class Application extends \PHPDaemon\Core\AppInstance
 
     /**
      * Called when the worker is ready to go.
+     *
      * @return void
      */
-    public function onReady()
+    public function onReady ()
     {
-
 
         require_once ZERO_ROOT . '/vendor/zer0-framework/core/src/bootstrap.php';
 
@@ -49,45 +50,67 @@ final class Application extends \PHPDaemon\Core\AppInstance
         $this->pool = $this->app->factory('QueueAsync', $this->config->name ?? '');
         $this->poll();
 
-        setTimeout(function (Timer $timer): void {
-            $this->pool->listChannels(function (array $channels): void {
-                foreach ($channels as $channel) {
-                    $this->pool->timedOutTasks($channel);
-                }
-            });
+        setTimeout(
+            function (Timer $timer): void {
+                $this->pool->listChannels(
+                    function (array $channels): void {
+                        foreach ($channels as $channel) {
+                            $this->pool->timedOutTasks($channel);
+                        }
+                    }
+                );
 
-            $this->pool->updateTimeouts($this->tasks);
+                $this->pool->updateTimeouts($this->tasks);
 
-            $timer->timeout(5e6);
-        }, 1);
+                $timer->timeout(5e6);
+            },
+            1
+        );
     }
 
     /**
      *
      */
-    public function poll()
+    public function poll ()
     {
-        $channels = $this->config->channels->value ?? null;
-        $this->pool->poll($channels ? (array) $channels : null, function (?TaskAbstract $task) {
-            try {
-                if (!$task) {
-                    return;
-                }
-                $this->tasks->attach($task);
-                $task->setQueuePool($this->pool);
-                $task->setCallback(function (TaskAbstract $task) {
-                    $task->setQueuePool(null);
-                    $this->pool->complete($task);
-                    $this->tasks->detach($task);
-                });
-                Daemon::$process->setState(Daemon::WSTATE_BUSY);
-                $task();
-                Daemon::$process->setState(Daemon::WSTATE_IDLE);
-            } finally {
-                if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
+        if (isset($this->config->maxconcurrency->value)
+            && $this->tasks->count() > $this->config->maxconcurrency->value) {
+            setTimeout(
+                function (Timer $timer): void {
                     $this->poll();
+                    $timer->free();
+                },
+                1e6
+            );
+
+            return;
+        }
+        $channels = $this->config->channels->value ?? null;
+        $this->pool->poll(
+            $channels ? (array)$channels : null,
+            function (?TaskAbstract $task) {
+                try {
+                    if (!$task) {
+                        return;
+                    }
+                    $this->tasks->attach($task);
+                    $task->setQueuePool($this->pool);
+                    $task->setCallback(
+                        function (TaskAbstract $task) {
+                            $task->setQueuePool(null);
+                            $this->pool->complete($task);
+                            $this->tasks->detach($task);
+                        }
+                    );
+                    Daemon::$process->setState(Daemon::WSTATE_BUSY);
+                    $task();
+                    Daemon::$process->setState(Daemon::WSTATE_IDLE);
+                } finally {
+                    if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
+                        $this->poll();
+                    }
                 }
             }
-        });
+        );
     }
 }
