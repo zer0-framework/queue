@@ -59,7 +59,7 @@ final class ExtRedis extends Base
      * @return TaskAbstract
      * @throws \Zer0\Exceptions\InvalidArgumentException
      */
-    public function enqueue (TaskAbstract $task): TaskAbstract
+    public function push (TaskAbstract $task): TaskAbstract
     {
         $taskId = $task->getId();
         $autoId = $taskId === null;
@@ -67,6 +67,7 @@ final class ExtRedis extends Base
             $task->setId($taskId = $this->nextId());
         }
         $task->beforeEnqueue();
+        $task->beforePush();
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);
@@ -338,7 +339,7 @@ final class ExtRedis extends Base
     /**
      * {@inheritdoc}
      */
-    public function poll (?array $channels = null): ?TaskAbstract
+    public function pop (?array $channels = null): ?TaskAbstract
     {
         if ($channels === null) {
             $channels = $this->listChannels();

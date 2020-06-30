@@ -144,9 +144,16 @@ abstract class TaskAbstract
     /**
      *
      */
-    public function beforeEnqueue (): void
+    public function beforePush (): void
     {
         $this->enqueuedAt = microtime(true);
+    }
+
+    /**
+     * @deprecated 
+     */
+    public function beforeEnqueue (): void
+    {
     }
 
     /**

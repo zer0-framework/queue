@@ -59,7 +59,7 @@ final class Redis extends Base
      * @throws \RedisClient\Exception\InvalidArgumentException
      * @throws \Zer0\Exceptions\InvalidArgumentException
      */
-    public function enqueue(TaskAbstract $task): TaskAbstract
+    public function push(TaskAbstract $task): TaskAbstract
     {
         $taskId = $task->getId();
         $autoId = $taskId === null;
@@ -67,6 +67,7 @@ final class Redis extends Base
             $task->setId($taskId = $this->nextId());
         }
         $task->beforeEnqueue();
+        $task->beforePush();
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);
@@ -271,7 +272,7 @@ final class Redis extends Base
     /**
      * {@inheritdoc}
      */
-    public function poll(?array $channels = null): ?TaskAbstract
+    public function pop(?array $channels = null): ?TaskAbstract
     {
         if ($channels === null) {
             $channels = $this->listChannels();

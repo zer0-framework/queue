@@ -51,7 +51,28 @@ abstract class BaseAsync
      * @param TaskAbstract $task
      * @param callable $cb (TaskAbstract $success, BaseAsync $pool)
      */
-    abstract public function enqueue(TaskAbstract $task, ?callable $cb = null): void;
+    abstract public function push(TaskAbstract $task, ?callable $cb = null): void;
+
+    /**
+     * @param TaskAbstract $task
+     * @deprecated
+     * @param callable $cb (TaskAbstract $success, BaseAsync $pool)
+     */
+    final public function enqueue(TaskAbstract $task, ?callable $cb = null): void {
+        $this->push($task, $cb);
+    }
+
+    /**
+     * @param TaskAbstract $task
+     * @param int $seconds
+     * @param callable $cb
+     */
+    public function pushWait(TaskAbstract $task, int $seconds, callable $cb): void
+    {
+        $this->enqueue($task, function (TaskAbstract $task) use ($seconds, $cb): void {
+            $this->wait($task, $seconds, $cb);
+        });
+    }
 
     /**
      * @param TaskAbstract $task
@@ -60,9 +81,7 @@ abstract class BaseAsync
      */
     public function enqueueWait(TaskAbstract $task, int $seconds, callable $cb): void
     {
-        $this->enqueue($task, function (TaskAbstract $task) use ($seconds, $cb): void {
-            $this->wait($task, $seconds, $cb);
-        });
+        $this->pushWait($task, $seconds, $cb);
     }
 
     /**
@@ -105,7 +124,7 @@ abstract class BaseAsync
      * @param array|null $channels
      * @param callable $cb (TaskAbstract $task)
      */
-    abstract public function poll(?array $channels, callable $cb): void;
+    abstract public function pop(?array $channels, callable $cb): void;
 
     /**
      * @param callable $cb (array $channels)

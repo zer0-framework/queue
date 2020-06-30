@@ -48,7 +48,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
         $this->tasks = new \SplObjectStorage;
 
         $this->pool = $this->app->factory('QueueAsync', $this->config->name ?? '');
-        $this->poll();
+        $this->pop();
 
         setTimeout(
             function (Timer $timer): void {
@@ -71,13 +71,13 @@ final class Application extends \PHPDaemon\Core\AppInstance
     /**
      *
      */
-    public function poll ()
+    public function pop ()
     {
         if (isset($this->config->maxconcurrency->value)
             && $this->tasks->count() > $this->config->maxconcurrency->value) {
             setTimeout(
                 function (Timer $timer): void {
-                    $this->poll();
+                    $this->pop();
                     $timer->free();
                 },
                 1e6
@@ -86,7 +86,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
             return;
         }
         $channels = $this->config->channels->value ?? null;
-        $this->pool->poll(
+        $this->pool->pop(
             $channels ? (array)$channels : null,
             function (?TaskAbstract $task) {
                 try {
@@ -107,7 +107,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
                     Daemon::$process->setState(Daemon::WSTATE_IDLE);
                 } finally {
                     if (!Daemon::$process->isTerminated() && !Daemon::$process->reload) {
-                        $this->poll();
+                        $this->pop();
                     }
                 }
             }

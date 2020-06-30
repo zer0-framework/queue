@@ -110,6 +110,7 @@ final class RedisAsync extends BaseAsync
         $autoId = ctype_digit($taskId);
 
         $task->beforeEnqueue();
+        $task->beforePush();
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);
@@ -288,7 +289,7 @@ final class RedisAsync extends BaseAsync
      * @param array|null $channels
      * @param callable   $cb (TaskAbstract $task)
      */
-    public function poll (?array $channels = null, callable $cb): void
+    public function pop (?array $channels = null, callable $cb): void
     {
         if ($channels === null) {
             $this->listChannels(
