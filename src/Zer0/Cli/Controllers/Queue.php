@@ -6,6 +6,7 @@ use Zer0\Cli\AbstractController;
 use Zer0\Cli\Controllers\Queue\Tap;
 use Zer0\Cli\Controllers\Queue\Top;
 use Zer0\Cli\Exceptions\InvalidArgument;
+use Zer0\Queue\Exceptions\WaitTimeoutException;
 use Zer0\Queue\SomeTask;
 use Zer0\Queue\TaskAbstract;
 
@@ -41,9 +42,18 @@ final class Queue extends AbstractController
      * @param string $task
      * @throws InvalidArgument
      */
+    public function pushAction(string $task = ''): void
+    {
+        $this->queue->push($this->hydrateTask($task));
+    }
+
+    /**
+     * @param string $task
+     * @throws InvalidArgument
+     */
     public function enqueueAction(string $task = ''): void
     {
-        $this->queue->enqueue($this->hydrateTask($task));
+        $this->pushAction(...func_get_args());
     }
 
     /**
@@ -52,9 +62,23 @@ final class Queue extends AbstractController
      */
     public function enqueueWaitAction(string $task = '', string $timeout = '10', string $extraFlags = ''): void
     {
-        $task = $this->queue->enqueueWait($this->hydrateTask($task), (int)$timeout);
-        $this->renderTask($task, $extraFlags);
+        $this->pushWaitAction(...func_get_args());
     }
+
+    /**
+     * @param string $task
+     * @throws InvalidArgument
+     */
+    public function pushWaitAction(string $task = '', string $timeout = '10', string $extraFlags = ''): void
+    {
+        try {
+            $task = $this->queue->pushWait($this->hydrateTask($task), (int)$timeout);
+            $this->renderTask($task, $extraFlags);
+        } catch (WaitTimeoutException $e) {
+            $this->cli->errorLine('Timeout exceeded.');
+        }
+    }
+
 
     /**
      * @param string $task
@@ -141,7 +165,7 @@ final class Queue extends AbstractController
             $task = new SomeTask;
             $task->setChannel('test');
             $task->test = mt_rand(0, 10);
-            $this->queue->enqueue($task);
+            $this->queue->push($task);
             $this->cli->colorfulJson($task->getObjectVars());
             $this->cli->writeln('');
             usleep(0.1 * 1e6);
