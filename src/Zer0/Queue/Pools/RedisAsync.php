@@ -92,7 +92,7 @@ final class RedisAsync extends BaseAsync
      * @param TaskAbstract $task
      * @param callable     $cb (?TaskAbstract $task, BaseAsync $pool)
      */
-    public function enqueue (TaskAbstract $task, ?callable $cb = null): void
+    public function push (TaskAbstract $task, ?callable $cb = null): void
     {
         $taskId = $task->getId();
         if ($taskId === null) {
