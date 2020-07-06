@@ -157,11 +157,11 @@ abstract class TaskAbstract
     }
 
     /**
-     *
+     * @param \Throwable $exception
      */
-    protected function onException (): void
+    protected function onException (\Throwable $exception): void
     {
-        // Subject to overload
+        // Subject to overloading
     }
 
     /**
@@ -279,7 +279,7 @@ abstract class TaskAbstract
         $callback        = $this->callback;
         $this->callback  = null;
         $this->exception = $exception;
-        $this->onException();
+        $this->onException($exception);
         $this->after();
         $callback($this);
     }

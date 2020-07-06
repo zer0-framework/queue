@@ -5,6 +5,7 @@ namespace Zer0\Queue\Worker;
 use PHPDaemon\Core\Daemon;
 use PHPDaemon\Core\Timer;
 use Zer0\App;
+use Zer0\Cli\Exceptions\InvalidArgument;
 use Zer0\Queue\Pools\BaseAsync;
 use Zer0\Queue\SomeTask;
 use Zer0\Queue\TaskAbstract;
@@ -38,7 +39,6 @@ final class Application extends \PHPDaemon\Core\AppInstance
      */
     public function onReady ()
     {
-
         require_once ZERO_ROOT . '/vendor/zer0-framework/core/src/bootstrap.php';
 
         defined('ZERO_ASYNC') || define('ZERO_ASYNC', 1);
@@ -48,6 +48,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
         $this->tasks = new \SplObjectStorage;
 
         $this->pool = $this->app->factory('QueueAsync', $this->config->name ?? '');
+
         $this->pop();
 
         setTimeout(

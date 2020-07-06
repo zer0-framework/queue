@@ -299,7 +299,7 @@ final class RedisAsync extends BaseAsync
 
                         return;
                     }
-                    $this->poll($channels, $cb);
+                    $this->pop($channels, $cb);
                 }
             );
 
