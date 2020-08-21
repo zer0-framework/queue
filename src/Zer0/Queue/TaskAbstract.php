@@ -137,12 +137,12 @@ abstract class TaskAbstract
     {
         foreach ($this->then as $task) {
             $task->previous($this);
-            $this->queuePool->enqueue($task);
+            $this->queuePool->push($task);
         }
     }
 
     /**
-     *
+     * Called before pushing into the queue
      */
     public function beforePush (): void
     {
@@ -150,7 +150,7 @@ abstract class TaskAbstract
     }
 
     /**
-     * @deprecated 
+     * @deprecated
      */
     public function beforeEnqueue (): void
     {

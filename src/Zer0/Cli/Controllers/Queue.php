@@ -47,6 +47,19 @@ final class Queue extends AbstractController
         $this->queue->push($this->hydrateTask($task));
     }
 
+    public function infoAction(string $channel = 'default', string $measure = '') {
+
+        $stats = $this->queue->getChannelStats($channel);
+
+        if ($measure !== '') {
+            $this->cli->writeln($stats[$measure] ?? '');
+        } else {
+            $this->cli->writeln('Backlog: ' . number_format($stats['backlog']));
+            $this->cli->writeln('Total: ' . number_format($stats['total']));
+            $this->cli->writeln( 'Complete: ' . number_format($stats['complete']));
+        }
+    }
+
     /**
      * @param string $task
      * @throws InvalidArgument
