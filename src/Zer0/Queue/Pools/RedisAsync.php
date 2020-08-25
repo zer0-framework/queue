@@ -32,6 +32,11 @@ final class RedisAsync extends BaseAsync
     protected $prefix;
 
     /**
+     * @var int
+     */
+    protected $ttl;
+
+    /**
      * Redis constructor.
      *
      * @param ConfigInterface $config
@@ -42,6 +47,7 @@ final class RedisAsync extends BaseAsync
         parent::__construct($config, $app);
         $this->redis  = $this->app->broker('RedisAsync')->get($config->name ?? '');
         $this->prefix = $config->prefix ?? 'queue';
+        $this->ttl = $config->ttl ?? 3600;
     }
 
     /**
@@ -120,7 +126,7 @@ final class RedisAsync extends BaseAsync
             $redis->sAdd($this->prefix . ':list-channels', $channel);
             $redis->rPush($this->prefix . ':channel:' . $channel, $taskId);
             $redis->incr($this->prefix . ':channel-total:' . $channel);
-            $redis->set($this->prefix . ':input:' . $taskId, $payload);
+            $redis->setex($this->prefix . ':input:' . $taskId, $this->ttl, $payload);
             $redis->del($this->prefix . ':output:' . $taskId, $this->prefix . ':blpop:' . $taskId);
             $redis->exec(
                 function (RedisConnection $redis) use ($cb, $task): void {
@@ -456,7 +462,7 @@ final class RedisAsync extends BaseAsync
                     $this->prefix . ':channel-pending:' . $channel,
                     $task->getId()
                 );
-                $redis->set($this->prefix . ':output:' . $taskId, $payload);
+                $redis->setex($this->prefix . ':output:' . $taskId, $this->ttl, $payload);
                 $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
 
                 $redis->rPush($this->prefix . ':blpop:' . $taskId, ...range(1, 10));

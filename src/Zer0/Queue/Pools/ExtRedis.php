@@ -41,6 +41,11 @@ final class ExtRedis extends Base
     protected $saving = false;
 
     /**
+     * @var int
+     */
+    protected $ttl;
+
+    /**
      * ExtRedis constructor.
      *
      * @param ConfigInterface $config
@@ -51,6 +56,7 @@ final class ExtRedis extends Base
         parent::__construct($config, $app);
         $this->redis  = $this->app->broker('ExtRedis')->get($config->redis ?? '');
         $this->prefix = $config->prefix ?? 'queue';
+        $this->ttl = $config->ttl ?? 3600;
     }
 
     /**
@@ -86,7 +92,7 @@ final class ExtRedis extends Base
             $redis->sAdd($this->prefix . ':list-channels', $channel);
             $redis->rPush($this->prefix . ':channel:' . $channel, $taskId);
             $redis->incr($this->prefix . ':channel-total:' . $channel);
-            $redis->set($this->prefix . ':input:' . $taskId, $payload);
+            $redis->set($this->prefix . ':input:' . $taskId, $payload, $this->ttl);
             $redis->del(
                 [
                     $this->prefix . ':output:' . $taskId,
@@ -487,7 +493,7 @@ final class ExtRedis extends Base
                 $payload = igbinary_serialize($task);
 
                 $redis->publish($this->prefix . ':output:' . $taskId, $payload);
-                $redis->set($this->prefix . ':output:' . $taskId, $payload, 15 * 60);
+                $redis->set($this->prefix . ':output:' . $taskId, $payload, $this->ttl);
 
                 $channel = $task->getChannel();
 
@@ -503,7 +509,7 @@ final class ExtRedis extends Base
                 }
 
                 $redis->rPush($this->prefix . ':blpop:' . $taskId, range(1, 10));
-                $redis->expire($this->prefix . ':blpop:' . $taskId, 15 * 60);
+                $redis->expire($this->prefix . ':blpop:' . $taskId, $this->ttl);
                 $redis->del($this->prefix . ':input:' . $taskId);
 
                 $redis->exec();
