@@ -142,6 +142,20 @@ abstract class TaskAbstract
     }
 
     /**
+     * @return $this
+     */
+    public function resetState(): self
+    {
+        $this->invoked = false;
+        $this->exception = null;
+        $this->finished = false;
+        if (ctype_digit($this->_id)) {
+            $this->_id = null;
+        }
+        return $this;
+    }
+
+    /**
      * Called before pushing into the queue
      */
     public function beforePush (): void
