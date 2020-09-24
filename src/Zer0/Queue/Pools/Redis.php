@@ -188,6 +188,7 @@ final class Redis extends Base
      */
     public function waitCollection(TaskCollection $collection, float $timeout = 1): void
     {
+        $a -= $dsfdsfs;
         $hash = [];
         $pending = $collection->pending();
         $successful = $collection->successful();

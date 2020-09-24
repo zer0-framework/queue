@@ -77,7 +77,7 @@ final class RedisAsync extends BaseAsync
     public function setProgress(TaskAbstract $task, string $progress) {
         $timeout = $task->getTimeoutSeconds();
         if ($timeout > 0) {
-            $redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(),
+            $this->redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(),
                 'XX', time() + $timeout,  $task->getId());
         }
         $this->redis->publish($this->prefix . ':progress:' . $task->getId(), $progress);
@@ -181,12 +181,12 @@ final class RedisAsync extends BaseAsync
 
     /**
      * @param TaskAbstract $task
-     * @param int          $seconds
+     * @param int          $timeout
      * @param callable     $cb (?TaskAbstract $task)
      *
      * @throws IncorrectStateException
      */
-    public function wait (TaskAbstract $task, int $seconds, callable $cb): void
+    public function wait (TaskAbstract $task, int $timeout, callable $cb): void
     {
         $taskId = $task->getId();
         if ($taskId === null) {
@@ -194,7 +194,7 @@ final class RedisAsync extends BaseAsync
         }
         $this->redis->blPop(
             $this->prefix . ':blpop:' . $taskId,
-            $seconds,
+            $timeout,
             function (RedisConnection $redis) use ($taskId, $cb, $task) {
                 if (!$redis->result) {
                     $cb($task);
@@ -332,8 +332,8 @@ final class RedisAsync extends BaseAsync
                 $keys,
                 [
                     1,
-                    function (RedisConnection $redis) use ($cb) {
-                        if (!$redis->result) {
+                    function (?RedisConnection $redis) use ($cb) {
+                        if (!$redis || !$redis->result) {
                             $cb(null);
 
                             return;

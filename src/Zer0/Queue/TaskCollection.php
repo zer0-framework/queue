@@ -199,7 +199,7 @@ class TaskCollection
     public function wait (int $timeout = 1, float $purgeTimeout = 0): self
     {
         if ($this->poolAsync !== null) {
-            $this->poolAsync->waitCollection($this, $this->callback, $seconds);
+            $this->poolAsync->waitCollection($this, $this->callback, $dfdsfds);
 
             return $this;
         }
