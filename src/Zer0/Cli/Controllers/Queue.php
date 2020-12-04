@@ -47,6 +47,14 @@ final class Queue extends AbstractController
         $this->queue->push($this->hydrateTask($task));
     }
 
+    /**
+     * 
+     */
+    public function channelsAction(): void
+    {
+        $this->cli->writeln(implode(', ', $this->queue->listChannels()));
+    }
+
     public function infoAction(string $channel = 'default', string $measure = '') {
 
         $stats = $this->queue->getChannelStats($channel);
