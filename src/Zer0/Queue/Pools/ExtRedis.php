@@ -78,19 +78,19 @@ final class ExtRedis extends Base
 
         $payload = igbinary_serialize($task);
 
-        $pipeline = function () use (
+        $pipeline = function (bool $delayed = false) use (
             $taskId,
             $task,
             $payload,
-            $channel,
-            $autoId
+            $channel
         ) {
             $redis = $this->redis->pipeline();
-
             $redis->publish($this->prefix . ':enqueue-channel:' . $channel, $payload);
             $redis->multi();
             $redis->sAdd($this->prefix . ':list-channels', $channel);
-            $redis->rPush($this->prefix . ':channel:' . $channel, $taskId);
+            if (!$delayed) {
+                $redis->rPush($this->prefix . ':channel:' . $channel, $taskId);
+            }
             $redis->incr($this->prefix . ':channel-total:' . $channel);
             $redis->set($this->prefix . ':input:' . $taskId, $payload, $this->ttl);
             $redis->del(
@@ -103,7 +103,17 @@ final class ExtRedis extends Base
             $redis->exec();
         };
 
-        if (!$autoId && $task->getTimeoutSeconds() > 0) {
+        if ($task->getDelay() > 0) {
+            if ($this->redis->zAdd(
+                $this->prefix . ':channel-pending:' . $channel,
+                $task->getDelayOverwrite() ? [] : ['NX'],
+                time() + $task->getDelay(),
+                $taskId
+            )) {
+                $pipeline(true);
+            }
+        }
+        elseif (!$autoId && $task->getTimeoutSeconds() > 0) {
             if ($this->redis->zAdd(
                 $this->prefix . ':channel-pending:' . $channel,
                 ['NX'],

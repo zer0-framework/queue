@@ -120,11 +120,13 @@ final class RedisAsync extends BaseAsync
         $channel = $task->getChannel();
 
         $payload = igbinary_serialize($task);
-        $func    = function (RedisConnection $redis) use ($cb, $task, $channel, $taskId, $autoId, $payload): void {
+        $func    = function (RedisConnection $redis, bool $delayed = false) use ($cb, $task, $channel, $taskId, $autoId, $payload): void {
             $redis->publish($this->prefix . ':enqueue-channel:' . $channel, $payload);
             $redis->multi();
             $redis->sAdd($this->prefix . ':list-channels', $channel);
-            $redis->rPush($this->prefix . ':channel:' . $channel, $taskId);
+            if (!$delayed) {
+                $redis->rPush($this->prefix . ':channel:' . $channel, $taskId);
+            }
             $redis->incr($this->prefix . ':channel-total:' . $channel);
             $redis->setex($this->prefix . ':input:' . $taskId, $this->ttl, $payload);
             $redis->del($this->prefix . ':output:' . $taskId, $this->prefix . ':blpop:' . $taskId);
@@ -137,12 +139,29 @@ final class RedisAsync extends BaseAsync
             );
         };
 
-        $timeout = $task->getTimeoutSeconds();
-        if ($timeout > 0) {
+        if ($task->getDelay() > 0) {
+            $this->redis->zadd(
+                $this->prefix . ':channel-pending:' . $channel,
+                $task->getDelayOverwrite() ? null : 'NX',
+                time() + $task->getDelay(),
+                $taskId,
+                function (RedisConnection $redis) use ($func, $task, $cb): void {
+                    if (!$redis->result) {
+                        if ($cb !== null) {
+                            $cb($task, $this);
+                        }
+
+                        return;
+                    }
+                    $func($redis, true);
+                }
+            );
+        }
+        elseif (!$autoId && $task->getTimeoutSeconds() > 0) {
             $this->redis->zadd(
                 $this->prefix . ':channel-pending:' . $channel,
                 'NX',
-                time() + $timeout,
+                time() + $task->getTimeoutSeconds(),
                 $taskId,
                 function (RedisConnection $redis) use ($func, $task, $cb): void {
                     if (!$redis->result) {

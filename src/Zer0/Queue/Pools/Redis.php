@@ -77,12 +77,13 @@ final class Redis extends Base
 
         $payload = igbinary_serialize($task);
 
+        $delayed = false;
         $pipeline = function (PipelineInterface $redis) use (
             $taskId,
             $task,
             $payload,
             $channel,
-            $autoId
+            &$delayed
         ) {
             $redis->publish($this->prefix . ':enqueue-channel:' . $channel, $payload);
             $redis->multi();
@@ -98,7 +99,18 @@ final class Redis extends Base
             $redis->exec();
         };
 
-        if (!$autoId && $task->getTimeoutSeconds() > 0) {
+        if ($task->getDelay() > 0) {
+            if ($this->redis->zAdd(
+                $this->prefix . ':channel-pending:' . $channel,
+                $task->getDelayOverwrite() ? [] : ['NX'],
+                time() + $task->getDelay(),
+                $taskId
+            )) {
+                $delayed = true;
+                $this->redis->pipeline($pipeline);
+            }
+        }
+        elseif (!$autoId && $task->getTimeoutSeconds() > 0) {
             if ($this->redis->zAdd(
                 $this->prefix . ':channel-pending:' . $channel,
                 [$taskId => time() + $task->getTimeoutSeconds()],
