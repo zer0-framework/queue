@@ -214,12 +214,14 @@ abstract class TaskAbstract
 
     /**
      * @param int $delay
-     * @param bool $overwrite
+     * @param ?bool $overwrite
      */
-    final public function setDelay(int $delay, bool $overwrite = false): void
+    final public function setDelay(int $delay, bool $overwrite = null): void
     {
         $this->_delay = $delay;
-        $this->_delayOverwrite = $overwrite;
+        if ($overwrite !== null) {
+            $this->_delayOverwrite = $overwrite;
+        }
     }
 
 
@@ -418,6 +420,8 @@ abstract class TaskAbstract
                 'exception' => true,
                 'log' => true,
                 'then' => true,
+                '_delay' => true,
+                '_delayOverwrite' => true,
             ]
         );
     }

@@ -53,13 +53,17 @@ final class Application extends \PHPDaemon\Core\AppInstance
 
         setTimeout(
             function (Timer $timer): void {
-                $this->pool->listChannels(
-                    function (array $channels): void {
-                        foreach ($channels as $channel) {
-                            $this->pool->timedOutTasks($channel);
-                        }
+                $cb = function (array $channels): void {
+                    foreach ($channels as $channel) {
+                        $this->pool->timedOutTasks($channel);
                     }
-                );
+                };
+                $channels = $this->config->channels->value ?? null;
+                if ($channels !== null) {
+                    $cb($channels);
+                } else {
+                    $this->pool->listChannels($cb);
+                }
 
                 $this->pool->updateTimeouts($this->tasks);
 

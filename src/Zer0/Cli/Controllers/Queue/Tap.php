@@ -35,8 +35,13 @@ trait Tap
                         $event = 'error';
                     }
 
-                    $this->cli->write(strtoupper($event), $styleSheet[$event]);
-                    $this->cli->write(str_repeat(' ', 15 - strlen($event)));
+                    if ($task->getDelay()) {
+                        $text = 'DELAY:' . $task->getDelay();
+                    } else {
+                       $text = strtoupper($event);
+                    }
+                    $this->cli->write($text, $styleSheet[$event]);
+                    $this->cli->write(str_repeat(' ', 15 - strlen($text)));
 
                     $this->cli->write($task->getId());
                     $this->cli->write("\t");

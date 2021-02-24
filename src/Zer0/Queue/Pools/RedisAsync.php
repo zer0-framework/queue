@@ -447,8 +447,9 @@ final class RedisAsync extends BaseAsync
                                          * @var $task TaskAbstract
                                          */
                                         $task = igbinary_unserialize($redis->result);
-                                        if ($task->requeueOnTimeout()) {
-                                            $this->enqueue($task);
+                                        if ($task->getDelay() > 0 || $task->requeueOnTimeout()) {
+                                            $task->setDelay(0);
+                                            $this->push($task);
                                         }
                                     } catch (\Throwable $e) {
                                     }
