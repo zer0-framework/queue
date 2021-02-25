@@ -60,7 +60,7 @@ final class Application extends \PHPDaemon\Core\AppInstance
                 };
                 $channels = $this->config->channels->value ?? null;
                 if ($channels !== null) {
-                    $cb($channels);
+                    $cb((array) $channels);
                 } else {
                     $this->pool->listChannels($cb);
                 }
