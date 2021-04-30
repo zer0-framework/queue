@@ -47,7 +47,7 @@ final class RedisAsync extends BaseAsync
         parent::__construct($config, $app);
         $this->redis  = $this->app->broker('RedisAsync')->get($config->name ?? '');
         $this->prefix = $config->prefix ?? 'queue';
-        $this->ttl = $config->ttl ?? 3600;
+        $this->ttl    = $config->ttl ?? 3600;
     }
 
     /**
@@ -55,30 +55,41 @@ final class RedisAsync extends BaseAsync
      */
     public function updateTimeouts (iterable $tasks): void
     {
-        $this->redis->multi(function(RedisConnection $redis) use ($tasks): void {
-            foreach ($tasks as $task) {
-                /**
-                 * @var $task TaskAbstract
-                 */
-                $timeout = $task->getTimeoutSeconds();
-                if ($timeout > 0) {
-                    $redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(),
-                        'XX', time() + $timeout,  $task->getId());
+        $this->redis->multi(
+            function (RedisConnection $redis) use ($tasks): void {
+                foreach ($tasks as $task) {
+                    /**
+                     * @var $task TaskAbstract
+                     */
+                    $timeout = $task->getTimeoutSeconds();
+                    if ($timeout > 0) {
+                        $redis->zAdd(
+                            $this->prefix . ':channel-pending:' . $task->getChannel(),
+                            'XX',
+                            time() + $timeout,
+                            $task->getId()
+                        );
+                    }
+                    $redis->exec();
                 }
-                $redis->exec();
             }
-        });
+        );
     }
 
     /**
      * @param TaskAbstract $task
      * @param string       $progress
      */
-    public function setProgress(TaskAbstract $task, string $progress) {
+    public function setProgress (TaskAbstract $task, string $progress)
+    {
         $timeout = $task->getTimeoutSeconds();
         if ($timeout > 0) {
-            $this->redis->zAdd($this->prefix . ':channel-pending:' . $task->getChannel(),
-                'XX', time() + $timeout,  $task->getId());
+            $this->redis->zAdd(
+                $this->prefix . ':channel-pending:' . $task->getChannel(),
+                'XX',
+                time() + $timeout,
+                $task->getId()
+            );
         }
         $this->redis->publish($this->prefix . ':progress:' . $task->getId(), $progress);
     }
@@ -87,10 +98,14 @@ final class RedisAsync extends BaseAsync
      * @param TaskAbstract $task
      * @param callable     $cb
      */
-    public function subscribeProgress(TaskAbstract $task, callable $cb) {
-        $this->redis->subscribe($this->prefix . ':progress:' . $task->getId(), function(RedisConnection $redis) use ($cb): void {
-            $cb($redis->result);
-        });
+    public function subscribeProgress (TaskAbstract $task, callable $cb)
+    {
+        $this->redis->subscribe(
+            $this->prefix . ':progress:' . $task->getId(),
+            function (RedisConnection $redis) use ($cb): void {
+                $cb($redis->result);
+            }
+        );
 
     }
 
@@ -157,7 +172,7 @@ final class RedisAsync extends BaseAsync
                 }
             );
         }
-        elseif (!$autoId && $task->getTimeoutSeconds() > 0) {
+        else if (!$autoId && $task->getTimeoutSeconds() > 0) {
             $this->redis->zadd(
                 $this->prefix . ':channel-pending:' . $channel,
                 'NX',
@@ -242,7 +257,7 @@ final class RedisAsync extends BaseAsync
     /**
      * @param TaskCollection $collection
      * @param callable       $cb
-     * @param float            $timeout
+     * @param float          $timeout
      */
     public function waitCollection (TaskCollection $collection, callable $cb, float $timeout = 1): void
     {
@@ -467,31 +482,30 @@ final class RedisAsync extends BaseAsync
      */
     public function complete (TaskAbstract $task): void
     {
+        if (isset($task->_force_sync_complete)) { //  @TODO: REMOVE
+            App::instance()->factory('Queue')->complete($task);
+            return;
+        }
         $payload = igbinary_serialize($task);
-        $this->redis->multi(
-            function (?RedisConnection $redis) use ($task, $payload) {
-                if (!$redis) {
-                    return;
-                }
-                $taskId = $task->getId();
-                $redis->publish($this->prefix . ':output:' . $taskId, $payload);
+        $taskId  = $task->getId();
+        Daemon::log('[' . $taskId . '] complete()');
+        $redis = $this->redis;
+        $redis->publish($this->prefix . ':output:' . $taskId, $payload);
 
-                $channel = $task->getChannel();
-                $redis->publish($this->prefix . ':complete-channel:' . $channel, $payload);
-                $redis->zRem(
-                    $this->prefix . ':channel-pending:' . $channel,
-                    $task->getId()
-                );
-                $redis->setex($this->prefix . ':output:' . $taskId, $this->ttl, $payload);
-                $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
-
-                $redis->rPush($this->prefix . ':blpop:' . $taskId, ...range(1, 10));
-                $redis->expire($this->prefix . ':blpop:' . $taskId, 10);
-
-                $redis->del($this->prefix . ':input:' . $taskId);
-
-                $redis->exec();
-            }
+        $channel = $task->getChannel();
+        $redis->publish($this->prefix . ':complete-channel:' . $channel, $payload);
+        $redis->zRem(
+            $this->prefix . ':channel-pending:' . $channel,
+            $task->getId()
         );
+        $redis->setex($this->prefix . ':output:' . $taskId, $this->ttl, $payload);
+        $redis->expire($this->prefix . ':output:' . $taskId, 15 * 60);
+
+        $redis->rPush($this->prefix . ':blpop:' . $taskId, ...range(1, 10));
+        $redis->expire($this->prefix . ':blpop:' . $taskId, 10);
+
+        $redis->del($this->prefix . ':input:' . $taskId);
+
+        Daemon::log('[' . $taskId . '] redis exec call');
     }
 }

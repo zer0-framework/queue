@@ -56,7 +56,7 @@ final class ExtRedis extends Base
         parent::__construct($config, $app);
         $this->redis  = $this->app->broker('ExtRedis')->get($config->redis ?? '');
         $this->prefix = $config->prefix ?? 'queue';
-        $this->ttl = $config->ttl ?? 3600;
+        $this->ttl    = $config->ttl ?? 3600;
     }
 
     /**
@@ -113,7 +113,7 @@ final class ExtRedis extends Base
                 $pipeline(true);
             }
         }
-        elseif (!$autoId && $task->getTimeoutSeconds() > 0) {
+        else if (!$autoId && $task->getTimeoutSeconds() > 0) {
             if ($this->redis->zAdd(
                 $this->prefix . ':channel-pending:' . $channel,
                 ['NX'],
@@ -131,40 +131,47 @@ final class ExtRedis extends Base
     }
 
     /**
-     * @param string $channel
+     * @param string   $channel
      * @param callable $cb
+     *
      * @throws \RedisClient\Exception\InvalidArgumentException
      */
-    public function subscribeCompat(string $channel, callable $cb): void
+    public function subscribeCompat (string $channel, callable $cb): void
     {
         if ($this->pubSubRedis === null) {
-            $broker = $this->app->broker('Redis');
-            $config = clone $broker->getConfig();
-            $config->timeout = 0.01;
+            $broker            = $this->app->broker('Redis');
+            $config            = clone $broker->getConfig();
+            $config->timeout   = 0.01;
             $this->pubSubRedis = $broker->instantiate($config);
         }
-        $this->pubSubRedis->subscribe([
-            $this->prefix . ':enqueue-channel:' . $channel,
-            $this->prefix . ':complete-channel:' . $channel,
-        ], function ($type, $chan, $data) use ($cb, $channel) {
-            $event = null;
-            if ($type === 'message') {
-                [$type, $eventChannel] = explode(':', substr($chan, strlen($this->prefix . ':')));
-                if ($channel !== $eventChannel) {
-                    $event = null;
-                } elseif ($type === 'enqueue-channel') {
-                    $event = 'new';
-                } elseif ($type === 'complete-channel') {
-                    $event = 'complete';
+        $this->pubSubRedis->subscribe(
+            [
+                $this->prefix . ':enqueue-channel:' . $channel,
+                $this->prefix . ':complete-channel:' . $channel,
+            ],
+            function ($type, $chan, $data) use ($cb, $channel) {
+                $event = null;
+                if ($type === 'message') {
+                    [$type, $eventChannel] = explode(':', substr($chan, strlen($this->prefix . ':')));
+                    if ($channel !== $eventChannel) {
+                        $event = null;
+                    }
+                    else if ($type === 'enqueue-channel') {
+                        $event = 'new';
+                    }
+                    else if ($type === 'complete-channel') {
+                        $event = 'complete';
+                    }
+                    try {
+                        $data = igbinary_unserialize($data);
+                    } catch (\ErrorException $e) {
+                        $event = null;
+                    }
                 }
-                try {
-                    $data = igbinary_unserialize($data);
-                } catch (\ErrorException $e) {
-                    $event = null;
-                }
+
+                return $cb($event, $event !== null ? $data : null);
             }
-            return $cb($event, $event !== null ? $data : null);
-        });
+        );
     }
 
     /**
@@ -176,8 +183,9 @@ final class ExtRedis extends Base
     public function subscribe (string $channel, callable $cb): void
     {
         $this->subscribeCompat($channel, $cb);
+
         return;
-        
+
         if ($this->pubSubRedis === null) {
             $broker            = $this->app->broker('ExtRedis');
             $config            = clone $broker->getConfig();
@@ -257,8 +265,8 @@ final class ExtRedis extends Base
      */
     public function waitCollection (TaskCollection $collection, float $timeout = 1): void
     {
-        $pending    = $collection->pending();
-        $hash       = [];
+        $pending = $collection->pending();
+        $hash    = [];
         foreach ($pending as $task) {
             $key  = $this->prefix . ':blpop:' . $task->getId();
             $item =& $hash[$key];
@@ -273,9 +281,9 @@ final class ExtRedis extends Base
         $successful = $collection->successful();
         $ready      = $collection->ready();
         $failed     = $collection->failed();
-        $time   = microtime(true);
-        $first  = true;
-        $popped = 0;
+        $time       = microtime(true);
+        $first      = true;
+        $popped     = 0;
         for (; ;) {
             if (!$hash) {
                 return;
@@ -494,36 +502,33 @@ final class ExtRedis extends Base
      */
     public function complete (TaskAbstract $task): void
     {
-        $this->redis->pipeline(
-            function (PipelineInterface $redis) use ($task) {
-                $redis->multi();
+        /**
+         * @var $redis \Redis
+         */
+        $redis = $this->redis->multi();
 
-                $taskId = $task->getId();
+        $taskId = $task->getId();
 
-                $payload = igbinary_serialize($task);
+        $payload = igbinary_serialize($task);
 
-                $redis->publish($this->prefix . ':output:' . $taskId, $payload);
-                $redis->set($this->prefix . ':output:' . $taskId, $payload, $this->ttl);
+        $redis->publish($this->prefix . ':output:' . $taskId, $payload);
+        $redis->set($this->prefix . ':output:' . $taskId, $payload, $this->ttl);
 
-                $channel = $task->getChannel();
+        $channel = $task->getChannel();
 
-                $redis->publish($this->prefix . ':complete-channel:' . $channel, $payload);
+        $redis->publish($this->prefix . ':complete-channel:' . $channel, $payload);
 
-                if ($task->getTimeoutSeconds() > 0) {
-                    $this->redis->zrem(
-                        $this->prefix . ':channel-pending:' . $channel,
-                        [
-                            $task->getId(),
-                        ]
-                    );
-                }
+        if ($task->getTimeoutSeconds() > 0) {
+            $this->redis->zrem(
+                $this->prefix . ':channel-pending:' . $channel,
+                $task->getId(),
+            );
+        }
 
-                $redis->rPush($this->prefix . ':blpop:' . $taskId, range(1, 10));
-                $redis->expire($this->prefix . ':blpop:' . $taskId, $this->ttl);
-                $redis->del($this->prefix . ':input:' . $taskId);
+        $redis->rPush($this->prefix . ':blpop:' . $taskId, 1, 2, 3, 4, 5, 6, 7, 9, 10);
+        $redis->expire($this->prefix . ':blpop:' . $taskId, $this->ttl);
+        $redis->del($this->prefix . ':input:' . $taskId);
 
-                $redis->exec();
-            }
-        );
+        $redis->exec();
     }
 }
