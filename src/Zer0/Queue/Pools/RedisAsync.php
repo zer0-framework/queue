@@ -329,7 +329,7 @@ final class RedisAsync extends BaseAsync
      * @param array|null $channels
      * @param callable   $cb (TaskAbstract $task)
      */
-    public function pop (?array $channels = null, callable $cb): void
+    public function pop (?array $channels, callable $cb): void
     {
         if ($channels === null) {
             $this->listChannels(
